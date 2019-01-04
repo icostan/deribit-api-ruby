@@ -3,17 +3,16 @@
 [![Build Status](https://travis-ci.org/icostan/deribit-api-ruby.svg?branch=master)](https://travis-ci.org/icostan/deribit-api-ruby)
 [![Maintainability](https://api.codeclimate.com/v1/badges/1e100fc78c8ebaa8b4b5/maintainability)](https://codeclimate.com/github/icostan/deribit-api-ruby/maintainability)
 [![Test Coverage](https://api.codeclimate.com/v1/badges/1e100fc78c8ebaa8b4b5/test_coverage)](https://codeclimate.com/github/icostan/deribit-api-ruby/test_coverage)
+[![Gem Version](https://badge.fury.io/rb/deribit-api.svg)](https://badge.fury.io/rb/deribit-api)
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/deribit`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+Ruby library for [Deribit API](https://docs.deribit.com)
 
 ## Installation
 
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'deribit'
+gem 'deribit-api'
 ```
 
 And then execute:
@@ -22,11 +21,19 @@ And then execute:
 
 Or install it yourself as:
 
-    $ gem install deribit
+    $ gem install deribit-api
 
 ## Usage
 
-TODO: Write usage instructions here
+```ruby
+require 'deribit'
+
+client = Deribit::Client.new
+
+trades = client.getlasttrades
+trades.size
+trades.first
+```
 
 ## Development
 
