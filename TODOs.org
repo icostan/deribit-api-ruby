@@ -1,0 +1,7 @@
+* Tasks                                                             :DERIBIT:
+** DONE Initial deribit gem release
+   CLOSED: [2019-01-04 Fri] SCHEDULED: <2019-01-04 Fri>
+** TODO public API
+** TODO private API
+** TODO websocket API
+** TODO FIX API
