@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    deribit-api (0.0.1)
+    deribit-api (0.1.1)
       faraday
       faraday_middleware
       hashie
@@ -44,4 +44,4 @@ DEPENDENCIES
   simplecov
 
 BUNDLED WITH
-   1.17.1
+   2.0.1
