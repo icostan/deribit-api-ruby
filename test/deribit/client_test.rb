@@ -2,7 +2,7 @@ require 'minitest_helper'
 
 class Deribit::ClientTest < Minitest::Test
   def setup
-    @client = Deribit::Client.new
+    @client = Deribit::Client.new testnet: true
   end
 
   def test_time
@@ -87,5 +87,91 @@ class Deribit::ClientTest < Minitest::Test
     settlements = @client.settlements
     assert settlements.size.positive?
     assert settlements.first.indexPrice.positive?
+  end
+
+
+  class PrivateTests < Minitest::Test
+    def  setup
+      @client = Deribit::Client.new key: ENV['API_KEY'], secret: ENV['API_SECRET'], testnet: true
+    end
+
+    def test_account
+      account = @client.account
+      assert account.equity.positive?
+    end
+
+    def test_buy
+      response = @client.buy 'BTC-PERPETUAL', 10, price: 2500
+      assert response.order.quantity.positive?
+      assert_equal 'open', response.order.state
+      assert_empty response.trades
+
+      @client.cancel response.order.orderId
+    end
+
+    def test_sell
+      response = @client.sell 'BTC-PERPETUAL', 10, price: 5500
+      assert response.order.quantity.positive?
+      assert_equal 'open', response.order.state
+      assert_empty response.trades
+
+      @client.cancelall
+    end
+
+    def test_edit
+      response = @client.buy 'BTC-PERPETUAL', 10, price: 1000
+      response = @client.edit response.order.orderId, 5, 1500
+      assert_equal 5, response.order.quantity
+      assert_equal 1500, response.order.price
+      assert_equal 'open', response.order.state
+
+      @client.cancel response.order.orderId
+    end
+
+    def test_cancel
+      response = @client.buy 'BTC-PERPETUAL', 10, price: 1000
+      response = @client.cancel response.order.orderId
+      assert_equal 'cancelled', response.order.state
+    end
+
+    def test_orders
+      @client.buy 'BTC-PERPETUAL', 9, price: 1000
+      orders = @client.orders
+      assert_equal 1, orders.size
+      assert_equal 9, orders.first.quantity
+
+      @client.cancelall
+    end
+
+    def test_positions
+      positions = @client.positions
+      assert_empty positions
+    end
+
+    def test_orderhistory
+      history = @client.orders_history
+      assert_equal 2, history.size
+    end
+
+    def test_orderdetails
+      order = @client.order '2175131427'
+      assert_equal 'filled', order.state
+    end
+
+    def test_trades_history
+      trades = @client.trades_history
+      assert trades.size.positive?
+    end
+
+    def test_new_announcements
+      announcements = @client.new_announcements
+      assert_empty announcements
+    end
+
+    def test_settlements_history
+      response = @client.settlements_history
+      assert response.settlements.size.positive?
+      assert_equal 'settlement', response.settlements.first.type
+    end
   end
 end

@@ -3,7 +3,11 @@
    CLOSED: [2019-01-04 Fri] SCHEDULED: <2019-01-04 Fri>
 ** DONE public HTTP API
    CLOSED: [2019-02-27 Wed] SCHEDULED: <2019-02-27 Wed>
-** TODO private HTTP API
+** DONE private HTTP API
+   CLOSED: [2019-03-05 Tue] SCHEDULED: <2019-03-04 Mon>
 ** FIX API
 ** DONE use minitest
    CLOSED: [2019-02-26 Tue] SCHEDULED: <2019-02-26 Tue>
+** extract RPC client
+** Websocket API
+** response middleware

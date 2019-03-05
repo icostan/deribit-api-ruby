@@ -4,6 +4,7 @@ require 'hashie'
 
 require 'deribit/version'
 require 'deribit/client'
+require 'deribit/authentication'
 
 # Root module
 module Deribit
