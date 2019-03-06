@@ -11,3 +11,4 @@
 ** extract RPC client
 ** Websocket API
 ** response middleware
+** check key/secret present for private endpoints

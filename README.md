@@ -3,6 +3,7 @@
 [![Build Status](https://travis-ci.org/icostan/deribit-api-ruby.svg?branch=master)](https://travis-ci.org/icostan/deribit-api-ruby)
 [![Maintainability](https://api.codeclimate.com/v1/badges/1e100fc78c8ebaa8b4b5/maintainability)](https://codeclimate.com/github/icostan/deribit-api-ruby/maintainability)
 [![Test Coverage](https://api.codeclimate.com/v1/badges/1e100fc78c8ebaa8b4b5/test_coverage)](https://codeclimate.com/github/icostan/deribit-api-ruby/test_coverage)
+[![Inline docs](http://inch-ci.org/github/icostan/deribit-api-ruby.svg?branch=master)](http://inch-ci.org/github/icostan/deribit-api-ruby)
 [![Gem Version](https://badge.fury.io/rb/deribit-api.svg)](https://badge.fury.io/rb/deribit-api)
 [![Yard Docs](https://img.shields.io/badge/yard-docs-blue.svg)](https://www.rubydoc.info/gems/deribit-api)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/icostan/deribit-api-ruby/blob/master/LICENSE)
@@ -31,9 +32,12 @@ Or install it yourself as:
 
 ```ruby
 require 'deribit-api'
+```
 
+Create a simple client to access public APIs
+
+```ruby
 client = Deribit::Client.new
-
 trades = client.trades 'options', count: 3
 trades.first
   => #<Hashie::Mash amount=3.0 direction="buy" indexPrice=3817.31 instrument="BTC-29MAR19-4500-C" iv=60.33 price=0.016 quantity=3.0 tickDirection=0 timeStamp=1551274556589 tradeId=16055937 tradeSeq=712>
@@ -41,57 +45,87 @@ trades.first.instrument
   => "BTC-29MAR19-4500-C"
 ```
 
-### API Endpoints
+Pass key and secret to access private APIs
 
-#### Instruments
+```ruby
+client = Deribit::Client.new key: 'KEY', secret: 'SECRET'
+account = client.account
+ => #<Hashie::Mash PNL=0.0 SRPL=0.0 SUPL=0.0 availableFunds=9.99995789 balance=9.99995789 currency="BTC" deltaTotal=0.0 depositAddress="2N6SU5Yjn7AfYcT89QyeeHvHyZoqTt2GLyi" equity=9.999957896 futuresPNL=0.0 futuresSRPL=0.0 futuresSUPL=0.0 initialMargin=0.0 maintenanceMargin=0.0 marginBalance=9.99995789 optionsD=0.0 optionsG=0.0 optionsPNL=0.0 optionsSRPL=0.0 optionsSUPL=0.0 optionsTh=0.0 optionsV=0.0 sessionFunding=0.0>
+account.equity
+  => 9.999957896
+```
+
+### Examples
+
+Fetch all tradable instruments:
 
 ```ruby
 instruments = client.instruments
 puts instruments.first
 ```
 
-#### Currencies
-
-```ruby
-currencies = client.currencies
-puts currencies.first
-```
-
-#### Orderbook
+Orderbook for BTCUSD perpetual instrument:
 
 ```ruby
 orderbook = client.orderbook 'BTC-PERPETUAL', depth: 3
-puts orderbook.bids.first
+puts orderbook.asks.first
 ```
 
-#### Trades
+ Place a BTCUSD limit buy order 100 contracts @ 2500:
 
 ```ruby
-trades = client.trades 'options', count: 3
+response = client.buy 'BTC-PERPETUAL', 100, price: 2500
+puts response.order.state
+```
+
+Get last 10 option trades:
+
+```ruby
+trades = client.trades 'options', count: 10
 puts trades.first
 ```
 
-#### Summary
-
+Options trading summary:
 
 ```ruby
-summaries = client.summary :futures
+summaries = client.summary :options
 puts summaries.first
 ```
 
-#### Announcements
+## API Endpoints
 
-```ruby
-announcements = client.announcements
-puts announcements.first
-```
+All endpoints marked with [X] are fully implemented and ready to use, see the features table below:
 
-#### Settlements
-
-```ruby
-settlements = client.settlements
-puts settlements.first
-```
+API endpoints | Private? | HTTP API | Websocket API | FIX API
+---| :---: | :---: | :---: |
+Time || [X] ||
+Test || [X] ||
+Ping || [X] ||
+Instruments || [X] ||
+Currencies || [X] ||
+Index || [X] ||
+Orderbook || [X] ||
+Trades || [X] ||
+Summary || [X] ||
+Announcements || [X] ||
+Settlements || [X] ||
+Account | YES | [X] ||
+Buy | YES | [X] ||
+Sell | YES | [X] ||
+Edit | YES | [X] ||
+Cancel | YES | [X] ||
+Cancel all | YES | [X] ||
+Orders | YES | [X] ||
+Positions | YES | [X] ||
+Orders history | YES | [X] ||
+Order | YES | [X] ||
+Trades history | YES | [X] ||
+New announcements | YES | [X] ||
+Cancel on disconnect | YES | [X] ||
+Get email lang | YES | [X] ||
+Set email lang | YES | [X] ||
+Set announcements read | YES | [X] ||
+Settlements history | YES | [X] ||
 
 ## Development
 
