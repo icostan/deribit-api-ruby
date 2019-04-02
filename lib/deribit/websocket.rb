@@ -16,9 +16,9 @@ module Deribit
 
     # Subscribe to a specific topic and optionally filter by symbol
     # @param topic [String] topic to subscribe to e.g. 'trade'
-    # @param arguments [Hash] the arguments for subscription
+    # @param params [Hash] the arguments for subscription
     # @yield [Array] data payload
-    def subscribe(topic, arguments: {}, &callback)
+    def subscribe(topic, params: {}, &callback)
       raise 'callback block is required' unless block_given?
 
       EM.run do
@@ -27,7 +27,7 @@ module Deribit
         id = rand(9999)
         @callbacks[id] = callback
 
-        payload = { id: id, action: "/api/v1/public/#{topic}", arguments: arguments }
+        payload = { id: id, action: "/api/v1/public/#{topic}", arguments: params }
         @faye.send payload.to_json.to_s
       end
     end
