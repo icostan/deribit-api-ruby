@@ -10,8 +10,18 @@
    CLOSED: [2019-02-26 Tue] SCHEDULED: <2019-02-26 Tue>
 ** extract HTTP client
 ** DONE public Websocket API
-   CLOSED: [2019-04-02 Tue 12:55] SCHEDULED: <2019-03-29 Fri>
+   CLOSED: [2019-04-02 Tue 13:12] SCHEDULED: <2019-03-29 Fri>
+   :LOGBOOK:
+   CLOCK: [2019-04-02 Tue 10:10]--[2019-04-02 Tue 13:12] =>  3:02
+   :END:
 ** private Websocket API
 ** response middleware
 ** check key/secret present for private endpoints
 ** fix trade history
+** research async websocket implementation
+** TODO Deribit implementation
+   SCHEDULED: <2019-04-09 Tue +1w>
+   :PROPERTIES:
+   :LAST_REPEAT: [2019-04-02 Tue 13:02]
+   :END:
+   - State "DONE"       from "TODO"       [2019-04-02 Tue 13:02]

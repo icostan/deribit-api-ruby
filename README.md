@@ -71,6 +71,14 @@ orderbook = client.orderbook 'BTC-PERPETUAL', depth: 3
 puts orderbook.asks.first
 ```
 
+Orderbook streaming via websocket:
+
+```ruby
+@client.orderbook 'ETH-PERPETUAL' do |orderbook|
+  puts orderbook
+end
+```
+
  Place a BTCUSD limit buy order 100 contracts @ 2500:
 
 ```ruby
@@ -78,11 +86,19 @@ response = client.buy 'BTC-PERPETUAL', 100, price: 2500
 puts response.order.state
 ```
 
-Get last 10 option trades:
+Get last 10 option trades via HTTP:
 
 ```ruby
 trades = client.trades 'options', count: 10
 puts trades.first
+```
+
+Stream ongoing trades via websocket:
+
+```ruby
+@client.trades do |trade|
+ puts trade
+end
 ```
 
 Options trading summary:
