@@ -2,9 +2,9 @@ module Deribit
   # @author Iulian Costan
   class Client
     # URL for testnet
-    TESTNET_URL = 'https://test.deribit.com'
+    TESTNET_URL = 'test.deribit.com'
     # URL for mainnet
-    MAINNET_URL = 'https://www.deribit.com'
+    MAINNET_URL = 'www.deribit.com'
 
     # Create new instance
     # @param key [String] Deribit Access Key
@@ -13,7 +13,7 @@ module Deribit
     # @param debug [Boolean] set to true for debug output
     # @return [Deribit::Client] the instance of client
     def initialize(key: nil, secret: nil, testnet: false, debug: false)
-      url = testnet ? TESTNET_URL : MAINNET_URL
+      url = 'https://' + (testnet ? TESTNET_URL : MAINNET_URL)
       @connection = Faraday::Connection.new(url: url) do |f|
         f.request :json
         f.response :mashify
@@ -26,57 +26,116 @@ module Deribit
 
     # Retrieves the current time (in ms).
     # @return [Integer] current time in milliseconds
+    # @yield [Integer] current time in milliseconds
     # @see https://docs.deribit.com/rpc-endpoints.html#time
-    def time
-      get :time
+    def time(&blk)
+      if block_given?
+        websocket.subscribe :time, &blk
+      else
+        get :time
+      end
+    end
+
+    # Signals the Websocket connection to send and request heartbeats.
+    # @param interval [Integer] The heartbeat interval
+    # @yield [String] 'ok' on success, error message otherwise
+    # @see https://docs.deribit.com/rpc-endpoints.html#setheartbeat
+    def enable_heartbeat(interval = 60, &blk)
+      raise 'This API endpoint cannot be used over HTTP.' unless block_given?
+
+      websocket.subscribe :setheartbeat, params: { interval: interval }, &blk
+    end
+
+    # Signals the Websocket connection to not send or request heartbeats.
+    # @yield [String] 'ok' on success, error message otherwise
+    # @see https://docs.deribit.com/rpc-endpoints.html#cancelheartbeat
+    def cancel_heartbeat(&blk)
+      raise 'This API endpoint cannot be used over HTTP.' unless block_given?
+
+      websocket.subscribe :cancelheartbeat, &blk
     end
 
     # Tests the connection to the API server, and returns its version.
     # @param exception [any] Provide this parameter force an error message.
     # @return [Hashie::Mash] test data
+    # @yield [Hashie::Mash] test data
     # @see https://docs.deribit.com/rpc-endpoints.html#test
-    def test(exception: false)
-      get :test, params: { exception: exception }, raw_body: true
+    def test(exception: false, &blk)
+      params = { exception: exception }
+      if block_given?
+        websocket.subscribe :test, params: params, &blk
+      else
+        get :test, params: params, raw_body: true
+      end
     end
 
     # This API endpoint always responds with "pong".
-    # @return [Hashie::Mash] ping
+    # @return [String] pong
+    # @yield [String] pong
     # @see https://docs.deribit.com/rpc-endpoints.html#ping
-    def ping
-      get :ping
+    def ping(&blk)
+      if block_given?
+        websocket.subscribe :ping, &blk
+      else
+        get :ping
+      end
     end
 
     # Retrieves available trading instruments.
     # @param expired [Boolean] Set to true to show expired instruments instead of active ones.
     # @return [Array] the list of instruments
+    # @yield [Hashie::Mash] the instrument
     # @see https://docs.deribit.com/rpc-endpoints.html#getinstruments
-    def instruments(expired: false)
-      get :getinstruments, params: { expired: expired }
+    def instruments(expired: false, &blk)
+      params = { expired: expired }
+      if block_given?
+        websocket.subscribe :getinstruments, params: params, &blk
+      else
+        get :getinstruments, params: params
+      end
     end
 
     # Retrieves all cryptocurrencies supported by the API.
     # @return [Array] the list of cryptocurrencies
+    # @yield [Hashie:Hash] the currency
     # @see https://docs.deribit.com/rpc-endpoints.html#getcurrencies
-    def currencies
-      get :getcurrencies
+    def currencies(&blk)
+      if block_given?
+        websocket.subscribe :getcurrencies, &blk
+      else
+        get :getcurrencies
+      end
     end
 
     # Retrieves the current index price for the BTC-USD instruments.
+    # @param currency [String] the currency to get index for
     # @return [Hashie::Mash] index price for BTC-USD instrument
+    # @yield [Hashie::Mash] index price for BTC-USD instrument
     # @see https://docs.deribit.com/rpc-endpoints.html#index
-    def index
-      get :index
+    def index(currency = 'BTC', &blk)
+      params = { currency: currency }
+      if block_given?
+        websocket.subscribe :index, params: params, &blk
+      else
+        get :index, params: params
+      end
     end
 
     # Retrieves the order book, along with other market values for a given instrument.
     # @param instrument [String] The instrument name for which to retrieve the order book, (see #instruments)  to obtain instrument names.
     # @param depth [Integer] the depth of the order book
     # @return [Hashie::Mash] the order book
+    # @yield [Hashie::Mash] the order book
     # @see https://docs.deribit.com/rpc-endpoints.html#getorderbook
-    def orderbook(instrument, depth: 10)
+    def orderbook(instrument, depth: 10, &blk)
       raise ArgumentError, 'instrument param is required' unless instrument
 
-      get :getorderbook, params: { instrument: instrument, depth: depth }
+      params = { instrument: instrument, depth: depth }
+      if block_given?
+        websocket.subscribe :getorderbook, params: params, &blk
+      else
+        get :getorderbook, params: params
+      end
     end
 
     # Retrieve the latest trades that have occurred for a specific instrument.
@@ -92,35 +151,57 @@ module Deribit
     #   @option filters [Integer] :endTimestamp The timestamp (in ms) of the last trade to be returned
     #   @option filters [Boolean] :includeOld (false) to get archived trades for expired instruments when true (added from performance considerations)
     # @return [Array] the list of trades
+    # @yield [Hashie::Mash] new trade
     # @see https://docs.deribit.com/rpc-endpoints.html#getlasttrades
-    def trades(instrument = :all, filters = {})
+    def trades(instrument = :all, filters = {}, &blk)
       raise ArgumentError, 'instrument param is required' unless instrument
 
-      get :getlasttrades, params: filters.merge(instrument: instrument)
+      params = filters.merge(instrument: instrument)
+      if block_given?
+        websocket.subscribe :getlasttrades, params: params, &blk
+      else
+        get :getlasttrades, params: params
+      end
     end
 
     # Retrieves the summary information such as open interest, 24h volume, etc. for a specific instrument.
     # @param instrument [String] Either the name of the instrument, or 'all' for all active instruments, 'futures' for all active futures, or 'options' for all active options.
-    # @return [Array, Hashie::Hash] the summary as array or hash based on instrument param
+    # @return [Array, Hashie::Mash] the summary as array or hash based on instrument param
+    # @yield [Hashie::Mash] the summary
     # @see https://docs.deribit.com/rpc-endpoints.html#getsummary
-    def summary(instrument)
+    def summary(instrument = :all, &blk)
       raise ArgumentError, 'instrument argument is required' unless instrument
 
-      get :getsummary, params: { instrument: instrument }
+      params = { instrument: instrument }
+      if block_given?
+        websocket.subscribe :getsummary, params: params, &blk
+      else
+        get :getsummary, params: params
+      end
     end
 
     # Retrieves aggregated 24h trade volumes for different instrument types.
     # @return [Hashie::Mash] the statistics
+    # @yield [Hashie::Mash] the statistics
     # @see https://docs.deribit.com/rpc-endpoints.html#stats
-    def stats
-      get :stats
+    def stats(&blk)
+      if block_given?
+        websocket.subscribe :stats, &blk
+      else
+        get :stats
+      end
     end
 
     # Retrieves announcements from last 30 days.
     # @return [Array] the list of announcements
+    # @yield [Hashie::Mash] the announcement
     # @see https://docs.deribit.com/rpc-endpoints.html#getannouncements
-    def announcements
-      get :getannouncements
+    def announcements(&blk)
+      if block_given?
+        websocket.subscribe :getannouncements, &blk
+      else
+        get :getannouncements
+      end
     end
 
     # Retrieves settlement, delivery and bankruptcy events that have occurred.
@@ -130,10 +211,15 @@ module Deribit
     # @option filters [String] :type The type of settlements to return. Possible values "settlement", "delivery", "bankruptcy"
     # @option filters [Integer] :startTstamp The latest timestamp to return result for
     # @option filters [String] :continuation Continuation token for pagination. Each response contains a token to be used for continuation
-    # @return [Hashie::Hash] the settlements
+    # @return [Hashie::Mash] the settlements
+    # @yield [Hashie::Mash] the settlements
     # @see https://docs.deribit.com/rpc-endpoints.html#getlastsettlements
-    def settlements(filters = {})
-      get :getlastsettlements, params: filters
+    def settlements(filters = {}, &blk)
+      if block_given?
+        websocket.subscribe :getlastsettlements, params: filters, &blk
+      else
+        get :getlastsettlements, params: filters
+      end
     end
 
     # Retrieves user account summary.
@@ -289,10 +375,14 @@ module Deribit
     # @option filters [String] :type The type of settlements to return. Possible values "settlement", "delivery", "bankruptcy"
     # @option filters [Integer] :startTstamp The latest timestamp to return result for
     # @option filters [String] :continuation Continuation token for pagination. Each response contains a token to be used for continuation
-    # @return [Hashie::Hash] the settlements
+    # @return [Hashie::Mash] the settlements
     # @see https://docs.deribit.com/rpc-endpoints.html#settlementhistory
     def settlements_history(filters = {})
       get :settlementhistory, auth: true, params: filters
+    end
+
+    def websocket
+      Deribit::Websocket.new TESTNET_URL
     end
 
     private

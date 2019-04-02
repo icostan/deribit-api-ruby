@@ -8,7 +8,10 @@
 ** FIX API
 ** DONE use minitest
    CLOSED: [2019-02-26 Tue] SCHEDULED: <2019-02-26 Tue>
-** extract RPC client
-** Websocket API
+** extract HTTP client
+** DONE public Websocket API
+   CLOSED: [2019-04-02 Tue 12:55] SCHEDULED: <2019-03-29 Fri>
+** private Websocket API
 ** response middleware
 ** check key/secret present for private endpoints
+** fix trade history

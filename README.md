@@ -96,19 +96,21 @@ puts summaries.first
 
 All endpoints marked with [X] are fully implemented and ready to use, see the features table below:
 
-API endpoints | Private? | HTTP API | Websocket API | FIX API
----| :---: | :---: | :---: |
-Time || [X] ||
-Test || [X] ||
-Ping || [X] ||
-Instruments || [X] ||
-Currencies || [X] ||
-Index || [X] ||
-Orderbook || [X] ||
-Trades || [X] ||
-Summary || [X] ||
-Announcements || [X] ||
-Settlements || [X] ||
+API endpoints | Private? | HTTP API | Websocket API | FIX API |
+--------------|----------|----------|---------------|---------|
+Time || [X] | [X] ||
+Setheartbeat || N/A | [X] ||
+Cancelheartbeat || N/A | [X] ||
+Test || [X] | [X] ||
+Ping || [X] | [X] ||
+Instruments || [X] | [X] ||
+Currencies || [X] | [X] ||
+Index || [X] | [X] ||
+Orderbook || [X] | [X] ||
+Trades || [X] | [X] ||
+Summary || [X] | [X] ||
+Announcements || [X] | [X] ||
+Settlements || [X] | [X] ||
 Account | YES | [X] ||
 Buy | YES | [X] ||
 Sell | YES | [X] ||
