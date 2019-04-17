@@ -26,8 +26,9 @@
 ** research async websocket implementation
 ** cleaup 'params' for both http and websocket
 ** TODO Deribit implementation
-   SCHEDULED: <2019-04-09 Tue +1w>
+   SCHEDULED: <2019-04-23 Tue +1w>
    :PROPERTIES:
-   :LAST_REPEAT: [2019-04-02 Tue 13:02]
+   :LAST_REPEAT: [2019-04-17 Wed 18:26]
    :END:
+   - State "DONE"       from "TODO"       [2019-04-17 Wed 18:26]
    - State "DONE"       from "TODO"       [2019-04-02 Tue 13:02]
