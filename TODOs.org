@@ -14,11 +14,17 @@
    :LOGBOOK:
    CLOCK: [2019-04-02 Tue 10:10]--[2019-04-02 Tue 13:12] =>  3:02
    :END:
-** private Websocket API
+** DONE private Websocket API
+   CLOSED: [2019-04-17 Wed 18:26] SCHEDULED: <2019-04-16 Tue>
+   :LOGBOOK:
+   CLOCK: [2019-04-17 Wed 17:55]--[2019-04-17 Wed 18:26] =>  0:31
+   CLOCK: [2019-04-16 Tue 12:23]--[2019-04-16 Tue 18:16] =>  5:53
+   :END:
 ** response middleware
 ** check key/secret present for private endpoints
 ** fix trade history
 ** research async websocket implementation
+** cleaup 'params' for both http and websocket
 ** TODO Deribit implementation
    SCHEDULED: <2019-04-09 Tue +1w>
    :PROPERTIES:

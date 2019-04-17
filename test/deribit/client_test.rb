@@ -167,7 +167,7 @@ class Deribit::ClientTest < Minitest::Test
     end
   end
 
-  def  test_announcements_http
+  def test_announcements_http
     announcements = @client.announcements
     assert announcements.size.positive?
     assert !announcements.first.title.nil?
@@ -201,46 +201,108 @@ class Deribit::ClientTest < Minitest::Test
       @client = Deribit::Client.new key: ENV['API_KEY'], secret: ENV['API_SECRET'], testnet: true, debug: false
     end
 
-    def test_account
+    def test_account_http
       account = @client.account
       assert account.equity.positive?
     end
 
-    def test_buy
-      response = @client.buy 'BTC-PERPETUAL', 10, price: 2500
-      assert response.order.quantity.positive?
-      assert_equal 'open', response.order.state
-      assert_empty response.trades
-
-      @client.cancel response.order.orderId
+    def test_account_websocket
+      @client.account do |account|
+        assert account.equity.positive?
+        @client.websocket.stop
+      end
     end
 
-    def test_sell
-      response = @client.sell 'BTC-PERPETUAL', 10, price: 5500
-      assert response.order.quantity.positive?
-      assert_equal 'open', response.order.state
-      assert_empty response.trades
+    def test_buy_http
+      result = @client.buy 'BTC-PERPETUAL', 10, price: 2500
+      assert result.order.quantity.positive?
+      assert_equal 'open', result.order.state
+      assert_empty result.trades
+
+      @client.cancel result.order.orderId
+    end
+
+    def test_buy_websocket
+      @client.buy 'BTC-PERPETUAL', 10, price: 2500 do |result|
+        assert result.order.quantity.positive?
+        assert_equal 'open', result.order.state
+        assert_empty result.trades
+        @client.websocket.stop
+      end
+    end
+
+    def test_sell_http
+      result = @client.sell 'BTC-PERPETUAL', 10, price: 5500
+      assert result.order.quantity.positive?
+      assert_equal 'open', result.order.state
+      assert_empty result.trades
 
       @client.cancelall
     end
 
-    def test_edit
-      response = @client.buy 'BTC-PERPETUAL', 10, price: 1000
-      response = @client.edit response.order.orderId, 5, 1500
-      assert_equal 5, response.order.quantity
-      assert_equal 1500, response.order.price
-      assert_equal 'open', response.order.state
-
-      @client.cancel response.order.orderId
+    def test_sell_websocket
+      @client.sell 'BTC-PERPETUAL', 10, price: 5500 do |result|
+        assert result.order.quantity.positive?
+        assert_equal 'open', result.order.state
+        assert_empty result.trades
+        @client.cancelall
+        @client.websocket.stop
+      end
     end
 
-    def test_cancel
-      response = @client.buy 'BTC-PERPETUAL', 10, price: 1000
-      response = @client.cancel response.order.orderId
-      assert_equal 'cancelled', response.order.state
+    def test_edit_http
+      result = @client.buy 'BTC-PERPETUAL', 10, price: 1000
+      result = @client.edit result.order.orderId, 5, 1500
+      assert_equal 5, result.order.quantity
+      assert_equal 1500, result.order.price
+      assert_equal 'open', result.order.state
+
+      @client.cancel result.order.orderId
     end
 
-    def test_orders
+    def test_edit_websocket
+      result = @client.buy 'BTC-PERPETUAL', 10, price: 1000
+      @client.edit result.order.orderId, 5, 1500 do |result|
+        assert_equal 5, result.order.quantity
+        assert_equal 1500, result.order.price
+        assert_equal 'open', result.order.state
+        @client.cancel result.order.orderId
+
+        @client.websocket.stop
+      end
+    end
+
+    def test_cancel_http
+      result = @client.buy 'BTC-PERPETUAL', 10, price: 1000
+      result = @client.cancel result.order.orderId
+      assert_equal 'cancelled', result.order.state
+    end
+
+    def test_cancel_websocket
+      result = @client.buy 'BTC-PERPETUAL', 10, price: 1000
+      @client.cancel result.order.orderId do |result|
+        assert_equal 'cancelled', result.order.state
+
+        @client.websocket.stop
+      end
+    end
+
+    def test_cancelall_http
+      @client.buy 'BTC-PERPETUAL', 7, price: 1000
+      result = @client.cancelall
+      assert result
+    end
+
+    def test_cancelall_websocket
+      @client.buy 'BTC-PERPETUAL', 8, price: 1000
+      @client.cancelall do |result|
+        assert result
+
+        @client.websocket.stop
+      end
+    end
+
+    def test_orders_http
       @client.buy 'BTC-PERPETUAL', 9, price: 1000
       orders = @client.orders
       assert_equal 1, orders.size
@@ -249,36 +311,130 @@ class Deribit::ClientTest < Minitest::Test
       @client.cancelall
     end
 
-    def test_positions
+    def test_orders_websocket
+      @client.buy 'BTC-PERPETUAL', 9, price: 1000
+      @client.orders do |order|
+        assert_equal 9, order.quantity
+
+        @client.cancelall
+        @client.websocket.stop
+      end
+    end
+
+    def test_positions_http
       positions = @client.positions
       assert_empty positions
     end
 
-    def test_orderhistory
+    # TODO: need a testing position
+    # def test_positions_websocket
+    #   @client.positions do |position|
+    #     assert_empty position
+    #     @client.websocket.stop
+    #   end
+    # end
+
+    def test_orderhistory_http
       history = @client.orders_history
       assert_equal 2, history.size
     end
 
-    def test_orderdetails
+    def test_orderhistory_websocket
+      @client.orders_history do |order|
+        assert order.amount.positive?
+        @client.websocket.stop
+      end
+    end
+
+    def test_orderstate_http
       order = @client.order '2175131427'
       assert_equal 'filled', order.state
     end
 
-    def test_trades_history
+    def test_orderstate_websocket
+      @client.order '2175131427' do |order|
+        assert_equal 'filled', order.state
+        @client.websocket.stop
+      end
+    end
+
+    def test_trades_history_http
       skip 'it fails on testnet even if there are history trades '
       trades = @client.trades_history :all, startTimestamp: Time.new(2019, 3, 1).to_i
       assert trades.size.positive?
     end
 
-    def test_new_announcements
+    def test_trades_history_websocket
+      skip 'it fails on testnet even if there are history trades '
+      @client.trades_history :all, startTimestamp: Time.new(2019, 3, 1).to_i do |trade|
+        assert trade.size.positive?
+        @client.websocket.stop
+      end
+    end
+
+    def test_new_announcements_http
       announcements = @client.new_announcements
       assert_empty announcements
     end
 
-    def test_settlements_history
-      response = @client.settlements_history
-      assert response.settlements.size.positive?
-      assert_equal 'settlement', response.settlements.first.type
+    def test_new_announcements_websocket
+      skip 'need testing announcement'
+      @client.new_announcements do |announcement|
+        assert_empty !announcement.title
+        @client.websocket.stop
+      end
+    end
+
+    def test_logout
+      @client.logout do |result|
+        assert result
+        @client.websocket.stop
+      end
+    end
+
+    def test_cancelon_disconnect
+      @client.cancelondisconnect 'disabled' do |result|
+        assert result
+        @client.websocket.stop
+      end
+    end
+
+    def test_getemaillang_http
+      lang = @client.getemaillang
+      assert_equal 'en', lang
+    end
+
+    def test_getemaillang_websocket
+      @client.getemaillang do |lang|
+        assert_equal 'en', lang
+        @client.websocket.stop
+      end
+    end
+
+    def test_setemaillang_http
+      success = @client.setemaillang 'en'
+      assert success
+    end
+
+    def test_setemaillang_websocket
+      @client.setemaillang 'en' do |success|
+        assert success
+        @client.websocket.stop
+      end
+    end
+
+    def test_settlements_history_http
+      result = @client.settlements_history
+      assert result.settlements.size.positive?
+      assert_equal 'settlement', result.settlements.first.type
+    end
+
+    def test_settlements_history_websocket
+      @client.settlements_history do |result|
+        assert result.settlements.size.positive?
+        assert_equal 'settlement', result.settlements.first.type
+        @client.websocket.stop
+      end
     end
   end
 end

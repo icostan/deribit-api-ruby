@@ -127,23 +127,26 @@ Trades || [X] | [X] ||
 Summary || [X] | [X] ||
 Announcements || [X] | [X] ||
 Settlements || [X] | [X] ||
-Account | YES | [X] ||
-Buy | YES | [X] ||
-Sell | YES | [X] ||
-Edit | YES | [X] ||
-Cancel | YES | [X] ||
-Cancel all | YES | [X] ||
-Orders | YES | [X] ||
-Positions | YES | [X] ||
-Orders history | YES | [X] ||
-Order | YES | [X] ||
-Trades history | YES | [X] ||
-New announcements | YES | [X] ||
-Cancel on disconnect | YES | [X] ||
-Get email lang | YES | [X] ||
-Set email lang | YES | [X] ||
-Set announcements read | YES | [X] ||
-Settlements history | YES | [X] ||
+Account | YES | [X] | [X] ||
+Buy | YES | [X] | [X] ||
+Sell | YES | [X] | [X] ||
+Edit | YES | [X] | [X] ||
+Cancel | YES | [X] | [X] ||
+Cancel all | YES | [X] | [X] ||
+Orders | YES | [X] | [X] ||
+Positions | YES | [X] | [X]||
+Orders history | YES | [X] | [X] ||
+Order | YES | [X] |[X]||
+Trades history | YES | [X] | [X] ||
+New announcements | YES | [X] | [X] ||
+Logout | YES | N/A | [X] ||
+Cancel on disconnect | YES | N/A | [X] ||
+Get email lang | YES | [X] | [X] ||
+Set email lang | YES | [X] | [X] ||
+Set announcements read | YES | [X] | [X] ||
+Settlements history | YES | [X] | [X] ||
+Subscribe | | N/A |  ||
+Unsubscribe | | N/A |  ||
 
 ## Development
 

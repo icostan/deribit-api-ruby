@@ -1,16 +1,16 @@
 module Deribit
   class Websocket
-    attr_reader :host, :api_key, :api_secret
+    attr_reader :host, :key, :secret
 
     # Create new websocket instance
     # @param host [String] the underlying host to connect to
-    # @param api_key [String] the api key
-    # @param api_secret [String] the api secret
+    # @param key [String] the api key
+    # @param secret [String] the api secret
     # @return [Deribit::Websocket] new websocket instance
-    def initialize(host, api_key: nil, api_secret: nil)
+    def initialize(host, key: nil, secret: nil)
       @host = host
-      @api_key = api_key
-      @api_secret = api_secret
+      @key = key
+      @secret = secret
       @callbacks = {}
     end
 
@@ -24,10 +24,18 @@ module Deribit
       EM.run do
         connect
 
-        id = rand(9999)
+        # request id
+        id = Time.now.to_i
         @callbacks[id] = callback
 
-        payload = { id: id, action: "/api/v1/public/#{topic}", arguments: params }
+        # request action
+        auth = params.delete :auth
+        uri = auth ? 'private' : 'public'
+        action = "/api/v1/#{uri}/#{topic}"
+
+        payload = { id: id, action: action, arguments: params }
+        payload[:sig] = signature id, action, params if auth
+
         @faye.send payload.to_json.to_s
       end
     end
@@ -38,6 +46,19 @@ module Deribit
     end
 
     private
+
+    def signature(nonce, action, params)
+      payload = {
+        _: nonce,
+        _ackey: @key,
+        _acsec: @secret,
+        _action: action
+      }
+      payload.merge! params
+      # query = env['url'].query
+
+      Deribit.signature @key, nonce, payload, nil
+    end
 
     def websocket_url
       "wss://#{host}/ws/api/v1/"

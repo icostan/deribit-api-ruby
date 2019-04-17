@@ -6,6 +6,8 @@ module Deribit
     # URL for mainnet
     MAINNET_URL = 'www.deribit.com'
 
+    attr_reader :websocket
+
     # Create new instance
     # @param key [String] Deribit Access Key
     # @param secret [String] Deribit Secret Key
@@ -13,8 +15,8 @@ module Deribit
     # @param debug [Boolean] set to true for debug output
     # @return [Deribit::Client] the instance of client
     def initialize(key: nil, secret: nil, testnet: false, debug: false)
-      url = 'https://' + (testnet ? TESTNET_URL : MAINNET_URL)
-      @connection = Faraday::Connection.new(url: url) do |f|
+      host = testnet ? TESTNET_URL : MAINNET_URL
+      @connection = Faraday::Connection.new(url: 'https://' + host) do |f|
         f.request :json
         f.response :mashify
         f.response :json
@@ -22,6 +24,7 @@ module Deribit
         f.response :logger if debug
         f.adapter Faraday.default_adapter
       end
+      @websocket = Deribit::Websocket.new host, key: key, secret: secret
     end
 
     # Retrieves the current time (in ms).
@@ -225,9 +228,14 @@ module Deribit
     # Retrieves user account summary.
     # @param ext [Boolean] Requests additional fields
     # @return [Hashie::Mash] the account details
+    # @yield [Hashie::Mash] the account details
     # @see https://docs.deribit.com/rpc-endpoints.html#account
-    def account(ext: false)
-      get :account, auth: true
+    def account(ext: false, &blk)
+      if block_given?
+        websocket.subscribe :account, params: { auth: true }, &blk
+      else
+        get :account, auth: true
+      end
     end
 
     # Places a buy order for an instrument.
@@ -245,9 +253,15 @@ module Deribit
     #   @option options [String] :execInst (index_price) Defines trigger type, required for "stop_limit" order type, possible values "index_price", "mark_price" (Only valid for stop orders)
     #   @option options [String] :adv Advanced option order type, can be "implv", "usd". (Only valid for options)
     # @return [Hashie::Mash] the details of new order
+    # @yield [Hashie::Mash] the details of new order
     # @see https://docs.deribit.com/rpc-endpoints.html#buy
-    def buy(instrument, quantity, options = {})
-      post :buy, instrument: instrument, quantity: quantity, price: options[:price]
+    def buy(instrument, quantity, options = {}, &blk)
+      params = { instrument: instrument, quantity: quantity, price: options[:price] }
+      if block_given?
+        websocket.subscribe :buy, params: params.merge(auth: true), &blk
+      else
+        post :buy, params
+      end
     end
 
     # Places a sell order for an instrument.
@@ -255,9 +269,15 @@ module Deribit
     # @param quantity [Integer] The number of contracts to sell
     # @!macro deribit.options
     # @return [Hashie::Mash] the details of new order
+    # @yield [Hashie::Mash] the details of new order
     # @see https://docs.deribit.com/rpc-endpoints.html#sell
-    def sell(instrument, quantity, options = {})
-      post :sell, options.merge(instrument: instrument, quantity: quantity)
+    def sell(instrument, quantity, options = {}, &blk)
+      params = options.merge instrument: instrument, quantity: quantity, auth: true
+      if block_given?
+        websocket.subscribe :sell, params: params, &blk
+      else
+        post :sell, params
+      end
     end
 
     # Changes price and/or quantity of the own order.
@@ -269,26 +289,45 @@ module Deribit
     # @option options [String] :adv The new advanced order type (only valid for option orders)
     # @option options [Float] :stopPx The new stop price (only valid for stop limit orders)
     # @return [Hashie::Mash] the edited order
+    # @yield [Hashie::Mash] the edited order
     # @see https://docs.deribit.com/rpc-endpoints.html#edit
-    def edit(order_id, quantity, price, options = {})
-      post :edit, options.merge(orderId: order_id, quantity: quantity, price: price)
+    def edit(order_id, quantity, price, options = {}, &blk)
+      params = options.merge orderId: order_id, quantity: quantity, price: price, auth: true
+      if block_given?
+        websocket.subscribe :edit, params: params, &blk
+      else
+        post :edit, params
+      end
     end
 
     # Cancels an order, specified by order id.
     # @param order_id [String] The order id of the order to be cancelled
     # @return [Hashie::Mash] details of the cancelled order
+    # @yield [Hashie::Mash] details of the cancelled order
     # @see https://docs.deribit.com/rpc-endpoints.html#cancel
-    def cancel(order_id)
-      post :cancel, orderId: order_id
+    def cancel(order_id, &blk)
+      params = { orderId: order_id, auth: true }
+      if block_given?
+        websocket.subscribe :cancel, params: params, &blk
+      else
+        post :cancel, params
+      end
     end
 
     # Cancels all orders, optionally filtered by instrument or instrument type.
     # @param type [all futures options] Which type of orders to cancel. Valid values are "all", "futures", "options"
     # @param options [Hash] extra options
     # @option options [String] :instrument The name of the instrument for which to cancel all orders
+    # @return [Boolean] success or not
+    # @yield [Boolean] success or not
     # @see https://docs.deribit.com/rpc-endpoints.html#cancelall
-    def cancelall(type = :all, options = {})
-      post :cancelall, options.merge(type: type)
+    def cancelall(type = :all, options = {}, &blk)
+      params = options.merge type: type, auth: true
+      if block_given?
+        websocket.subscribe :cancelall, params: params, &blk
+      else
+        post :cancelall, params
+      end
     end
 
     # Retrieves open orders.
@@ -297,16 +336,27 @@ module Deribit
     # @option options [string] ;orderId order ID
     # @option options [String] :type Order types to return. Valid values include "limit", "stop_limit", "any"
     # @return [Array] the list of open orders
+    # @yield [Hashie::Mash] the order
     # @see https://docs.deribit.com/rpc-endpoints.html#getopenorders
-    def orders(options = {})
-      get :getopenorders, auth: true, params: options
+    def orders(options = {}, &blk)
+      if block_given?
+        websocket.subscribe :getopenorders, params: options.merge(auth: true), &blk
+      else
+        get :getopenorders, auth: true, params: options
+      end
     end
 
     # Retrieves current positions.
     # @return [Array] the list of positions
+    # @yield [Hashie::Mash] the position
     # @see https://docs.deribit.com/rpc-endpoints.html#positions
-    def positions
-      get :positions, auth: true
+    def positions(&blk)
+      params = { auth: true }
+      if block_given?
+        websocket.subscribe :positions, params: params, &blk
+      else
+        get :positions, params
+      end
     end
 
     # Retrieves history of orders that have been partially or fully filled.
@@ -315,57 +365,108 @@ module Deribit
     # @option options [String] :count The number of items to be returned.
     # @option options [string] :offset The offset for pagination
     # @return [Array] the list of history orders
+    # @yield [Hashie::Mash] the order
     # @see https://docs.deribit.com/rpc-endpoints.html#orderhistory
-    def orders_history(options = {})
-      get :orderhistory, auth: true, params: options
+    def orders_history(options = {}, &blk)
+      if block_given?
+        websocket.subscribe :orderhistory, params: options.merge(auth: true), &blk
+      else
+        get :orderhistory, auth: true, params: options
+      end
     end
 
     # Retrieve order details state by order id.
     # @param order_id [String] the ID of the order to be retrieved
-    # @return [Array] the details of the order
+    # @return [Hashie::Mash] the details of the order
+    # @yield [Hashie::Mash] the details of the order
     # @see https://docs.deribit.com/rpc-endpoints.html#orderstate
-    def order(order_id)
-      get :orderstate, auth: true, params: { orderId: order_id }
+    def order(order_id, &blk)
+      params = { orderId: order_id, auth: true }
+      if block_given?
+        websocket.subscribe :orderstate, params: params, &blk
+      else
+        get :orderstate, auth: true, params: params
+      end
     end
 
     # Retrieve the trade history of the account
     # @param instrument [String] Either the name of the instrument, or "all" for instruments, "futures" for all futures, or "options" for all options.
     # @!macro deribit.filters
     # @return [Array] the list of trades
+    # @yield [Hashie::Mash] the trade
     # @see https://docs.deribit.com/rpc-endpoints.html?q=#tradehistory
-    def trades_history(instrument = :all, filters = {})
-      get :tradehistory, auth: true, params: filters.merge(instrument: instrument)
+    def trades_history(instrument = :all, filters = {}, &blk)
+      params = filters.merge(instrument: instrument, auth: true)
+      if block_given?
+        websocket.subscribe :tradehistory, params: params, &blk
+      else
+        get :tradehistory, auth: true, params: params
+      end
     end
 
     # Retrieves announcements that have not been marked read by the current user.
     # @return [Array] the list of new announcements
-    def new_announcements
-      get :newannouncements, auth: true
+    # @yield [Hashie::Mash] the announcement
+    def new_announcements(&blk)
+      if block_given?
+        websocket.subscribe :newannouncements, params: { auth: true }, &blk
+      else
+        get :newannouncements, auth: true
+      end
+    end
+
+    # Logs out the websocket connection.
+    # @yield [Boolean] success or not
+    # @see https://docs.deribit.com/rpc-endpoints.html#logout
+    def logout(&blk)
+      raise 'This API endpoint cannot be used over HTTP.' unless block_given?
+
+      websocket.subscribe :logout, params: {}, &blk
     end
 
     # Enables or disables "COD" (cancel on disconnect) for the current connection.
     # @param state [String] Whether COD is to be enabled for this connection. "enabled" or "disabled"
-    def cancelondisconnect(state)
-      get :cancelondisconnect, auth: true, params: { state: state }
+    # @yield [Boolean] success or not
+    # @see https://docs.deribit.com/rpc-endpoints.html#cancelondisconnect
+    def cancelondisconnect(state, &blk)
+      raise 'This API endpoint cannot be used over HTTP.' unless block_given?
+
+      websocket.subscribe :cancelondisconnect, params: { state: state, auth: true }, &blk
     end
 
     # Retrieves the language to be used for emails.
     # @return [String] the language name (e.g. "en", "ko", "zh")
-    def getemaillang
-      get :getemaillang, auth: true
+    # @yield [String] the language name (e.g. "en", "ko", "zh")
+    def getemaillang(&blk)
+      if block_given?
+        websocket.subscribe :getemaillang, params: { auth: true }, &blk
+      else
+        get :getemaillang, auth: true
+      end
     end
 
     # Changes the language to be used for emails.
     # @param lang [String] the abbreviated language name. Valid values include "en", "ko", "zh"
-    def setemaillang(lang)
-      post :setemaillang, lang: lang
+    # @return [Boolean] success or not
+    # @yield [Boolean] success or not
+    def setemaillang(lang, &blk)
+      if block_given?
+        websocket.subscribe :setemaillang, params: { lang: lang, auth: true }, &blk
+      else
+        post :setemaillang, lang: lang
+      end
     end
 
     # Marks an announcement as read, so it will not be shown in newannouncements
     # @param announcement_id [String]  the ID of the announcement
     # @return [String] ok
-    def setannouncementasread(announcement_id)
-      post :setannouncementasread, announcementid: announcement_id
+    # @yield [String] ok
+    def setannouncementasread(announcement_id, &blk)
+      if block_given?
+        websocket.subscribe :setannouncementasread, params: { announcementid: announcement_id, auth: true }, &blk
+      else
+        post :setannouncementasread, announcementid: announcement_id
+      end
     end
 
     # Retrieves settlement, delivery and bankruptcy events that have affected your account.
@@ -376,13 +477,14 @@ module Deribit
     # @option filters [Integer] :startTstamp The latest timestamp to return result for
     # @option filters [String] :continuation Continuation token for pagination. Each response contains a token to be used for continuation
     # @return [Hashie::Mash] the settlements
+    # @yield [Hashie::Mash] the settlement
     # @see https://docs.deribit.com/rpc-endpoints.html#settlementhistory
-    def settlements_history(filters = {})
-      get :settlementhistory, auth: true, params: filters
-    end
-
-    def websocket
-      Deribit::Websocket.new TESTNET_URL
+    def settlements_history(filters = {}, &blk)
+      if block_given?
+        websocket.subscribe :settlementhistory, params: filters.merge(auth: true), &blk
+      else
+        get :settlementhistory, auth: true, params: filters
+      end
     end
 
     private
@@ -400,7 +502,8 @@ module Deribit
       response = @connection.post path(action, true), params
       raise response.message unless response.success?
       raise response.body.message unless response.body.success
-      response.body.result
+
+      response.body.result || response.body.success?
     end
 
     def path(action, auth = false)

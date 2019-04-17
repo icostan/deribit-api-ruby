@@ -27,17 +27,10 @@ module Deribit
         _acsec: @secret,
         _action: env['url'].path
       }
-      # add POST params
       params.merge! JSON.parse(env['body']) if env['body']
+      query = env['url'].query
 
-      signature_string = params.map{ |key, value| "#{key}=#{value}" }.sort.join '&'
-      # add GET query
-      signature_string += "&#{env['url'].query}" if env['url'].query
-
-      signature_digest = Digest::SHA256.digest signature_string
-      signature_hash = Base64.encode64 signature_digest
-
-      "#{@key}.#{nonce}.#{signature_hash.chomp}"
+      Deribit.signature @key, nonce, params, query
     end
   end
 end
