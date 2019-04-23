@@ -6,7 +6,7 @@ module Deribit
     # URL for mainnet
     MAINNET_URL = 'www.deribit.com'
 
-    attr_reader :websocket
+    attr_reader :http, :websocket
 
     # Create new instance
     # @param key [String] Deribit Access Key
@@ -16,14 +16,7 @@ module Deribit
     # @return [Deribit::Client] the instance of client
     def initialize(key: nil, secret: nil, testnet: false, debug: false)
       host = testnet ? TESTNET_URL : MAINNET_URL
-      @connection = Faraday::Connection.new(url: 'https://' + host) do |f|
-        f.request :json
-        f.response :mashify
-        f.response :json
-        f.use Deribit::Authentication, key, secret
-        f.response :logger if debug
-        f.adapter Faraday.default_adapter
-      end
+      @http = Deribit::Http.new host, key: key, secret: secret
       @websocket = Deribit::Websocket.new host, key: key, secret: secret
     end
 
@@ -35,7 +28,7 @@ module Deribit
       if block_given?
         websocket.subscribe :time, &blk
       else
-        get :time
+        http.get :time
       end
     end
 
@@ -68,7 +61,7 @@ module Deribit
       if block_given?
         websocket.subscribe :test, params: params, &blk
       else
-        get :test, params: params, raw_body: true
+        http.get :test, params: params, raw_body: true
       end
     end
 
@@ -80,7 +73,7 @@ module Deribit
       if block_given?
         websocket.subscribe :ping, &blk
       else
-        get :ping
+        http.get :ping
       end
     end
 
@@ -94,7 +87,7 @@ module Deribit
       if block_given?
         websocket.subscribe :getinstruments, params: params, &blk
       else
-        get :getinstruments, params: params
+        http.get :getinstruments, params: params
       end
     end
 
@@ -106,7 +99,7 @@ module Deribit
       if block_given?
         websocket.subscribe :getcurrencies, &blk
       else
-        get :getcurrencies
+        http.get :getcurrencies
       end
     end
 
@@ -120,7 +113,7 @@ module Deribit
       if block_given?
         websocket.subscribe :index, params: params, &blk
       else
-        get :index, params: params
+        http.get :index, params: params
       end
     end
 
@@ -137,7 +130,7 @@ module Deribit
       if block_given?
         websocket.subscribe :getorderbook, params: params, &blk
       else
-        get :getorderbook, params: params
+        http.get :getorderbook, params: params
       end
     end
 
@@ -163,7 +156,7 @@ module Deribit
       if block_given?
         websocket.subscribe :getlasttrades, params: params, &blk
       else
-        get :getlasttrades, params: params
+        http.get :getlasttrades, params: params
       end
     end
 
@@ -179,7 +172,7 @@ module Deribit
       if block_given?
         websocket.subscribe :getsummary, params: params, &blk
       else
-        get :getsummary, params: params
+        http.get :getsummary, params: params
       end
     end
 
@@ -191,7 +184,7 @@ module Deribit
       if block_given?
         websocket.subscribe :stats, &blk
       else
-        get :stats
+        http.get :stats
       end
     end
 
@@ -203,7 +196,7 @@ module Deribit
       if block_given?
         websocket.subscribe :getannouncements, &blk
       else
-        get :getannouncements
+        http.get :getannouncements
       end
     end
 
@@ -221,7 +214,7 @@ module Deribit
       if block_given?
         websocket.subscribe :getlastsettlements, params: filters, &blk
       else
-        get :getlastsettlements, params: filters
+        http.get :getlastsettlements, params: filters
       end
     end
 
@@ -234,7 +227,7 @@ module Deribit
       if block_given?
         websocket.subscribe :account, params: { auth: true }, &blk
       else
-        get :account, auth: true
+        http.get :account, auth: true
       end
     end
 
@@ -260,7 +253,7 @@ module Deribit
       if block_given?
         websocket.subscribe :buy, params: params.merge(auth: true), &blk
       else
-        post :buy, params
+        http.post :buy, params
       end
     end
 
@@ -276,7 +269,7 @@ module Deribit
       if block_given?
         websocket.subscribe :sell, params: params, &blk
       else
-        post :sell, params
+        http.post :sell, params
       end
     end
 
@@ -296,7 +289,7 @@ module Deribit
       if block_given?
         websocket.subscribe :edit, params: params, &blk
       else
-        post :edit, params
+        http.post :edit, params
       end
     end
 
@@ -310,7 +303,7 @@ module Deribit
       if block_given?
         websocket.subscribe :cancel, params: params, &blk
       else
-        post :cancel, params
+        http.post :cancel, params
       end
     end
 
@@ -326,7 +319,7 @@ module Deribit
       if block_given?
         websocket.subscribe :cancelall, params: params, &blk
       else
-        post :cancelall, params
+        http.post :cancelall, params
       end
     end
 
@@ -342,7 +335,7 @@ module Deribit
       if block_given?
         websocket.subscribe :getopenorders, params: options.merge(auth: true), &blk
       else
-        get :getopenorders, auth: true, params: options
+        http.get :getopenorders, auth: true, params: options
       end
     end
 
@@ -355,7 +348,7 @@ module Deribit
       if block_given?
         websocket.subscribe :positions, params: params, &blk
       else
-        get :positions, params
+        http.get :positions, params
       end
     end
 
@@ -371,7 +364,7 @@ module Deribit
       if block_given?
         websocket.subscribe :orderhistory, params: options.merge(auth: true), &blk
       else
-        get :orderhistory, auth: true, params: options
+        http.get :orderhistory, auth: true, params: options
       end
     end
 
@@ -385,7 +378,7 @@ module Deribit
       if block_given?
         websocket.subscribe :orderstate, params: params, &blk
       else
-        get :orderstate, auth: true, params: params
+        http.get :orderstate, auth: true, params: params
       end
     end
 
@@ -400,7 +393,7 @@ module Deribit
       if block_given?
         websocket.subscribe :tradehistory, params: params, &blk
       else
-        get :tradehistory, auth: true, params: params
+        http.get :tradehistory, auth: true, params: params
       end
     end
 
@@ -411,7 +404,7 @@ module Deribit
       if block_given?
         websocket.subscribe :newannouncements, params: { auth: true }, &blk
       else
-        get :newannouncements, auth: true
+        http.get :newannouncements, auth: true
       end
     end
 
@@ -441,7 +434,7 @@ module Deribit
       if block_given?
         websocket.subscribe :getemaillang, params: { auth: true }, &blk
       else
-        get :getemaillang, auth: true
+        http.get :getemaillang, auth: true
       end
     end
 
@@ -453,7 +446,7 @@ module Deribit
       if block_given?
         websocket.subscribe :setemaillang, params: { lang: lang, auth: true }, &blk
       else
-        post :setemaillang, lang: lang
+        http.post :setemaillang, lang: lang
       end
     end
 
@@ -465,7 +458,7 @@ module Deribit
       if block_given?
         websocket.subscribe :setannouncementasread, params: { announcementid: announcement_id, auth: true }, &blk
       else
-        post :setannouncementasread, announcementid: announcement_id
+        http.post :setannouncementasread, announcementid: announcement_id
       end
     end
 
@@ -483,32 +476,8 @@ module Deribit
       if block_given?
         websocket.subscribe :settlementhistory, params: filters.merge(auth: true), &blk
       else
-        get :settlementhistory, auth: true, params: filters
+        http.get :settlementhistory, auth: true, params: filters
       end
-    end
-
-    private
-
-    def get(action, params: {}, raw_body: false, auth: false)
-      response = @connection.get path(action, auth), params
-      # TODO: move to middleware
-      raise response.message unless response.success?
-      raise response.body.message unless response.body.success
-      body = response.body
-      raw_body ? body : body.result
-    end
-
-    def post(action, params)
-      response = @connection.post path(action, true), params
-      raise response.message unless response.success?
-      raise response.body.message unless response.body.success
-
-      response.body.result || response.body.success?
-    end
-
-    def path(action, auth = false)
-      access = auth ? 'private' : 'public'
-      "/api/v1/#{access}/#{action}"
     end
   end
 end

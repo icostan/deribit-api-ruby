@@ -7,6 +7,7 @@ require 'deribit/version'
 require 'deribit/client'
 require 'deribit/authentication'
 require 'deribit/websocket'
+require 'deribit/http'
 
 # Root module
 module Deribit

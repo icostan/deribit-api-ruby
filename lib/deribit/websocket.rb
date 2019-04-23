@@ -1,4 +1,6 @@
 module Deribit
+  # Websocket API
+  # @see https://docs.deribit.com/api-websocket.html
   class Websocket
     attr_reader :host, :key, :secret
 

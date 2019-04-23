@@ -232,7 +232,7 @@ class Deribit::ClientTest < Minitest::Test
     end
 
     def test_sell_http
-      result = @client.sell 'BTC-PERPETUAL', 10, price: 5500
+      result = @client.sell 'BTC-PERPETUAL', 10, price: 7500
       assert result.order.quantity.positive?
       assert_equal 'open', result.order.state
       assert_empty result.trades
@@ -241,7 +241,7 @@ class Deribit::ClientTest < Minitest::Test
     end
 
     def test_sell_websocket
-      @client.sell 'BTC-PERPETUAL', 10, price: 5500 do |result|
+      @client.sell 'BTC-PERPETUAL', 10, price: 7500 do |result|
         assert result.order.quantity.positive?
         assert_equal 'open', result.order.state
         assert_empty result.trades
@@ -336,7 +336,7 @@ class Deribit::ClientTest < Minitest::Test
 
     def test_orderhistory_http
       history = @client.orders_history
-      assert_equal 2, history.size
+      assert_equal 8, history.size
     end
 
     def test_orderhistory_websocket
@@ -359,13 +359,13 @@ class Deribit::ClientTest < Minitest::Test
     end
 
     def test_trades_history_http
-      skip 'it fails on testnet even if there are history trades '
+      # skip 'it fails on testnet even if there are history trades '
       trades = @client.trades_history :all, startTimestamp: Time.new(2019, 3, 1).to_i
       assert trades.size.positive?
     end
 
     def test_trades_history_websocket
-      skip 'it fails on testnet even if there are history trades '
+      # skip 'it fails on testnet even if there are history trades '
       @client.trades_history :all, startTimestamp: Time.new(2019, 3, 1).to_i do |trade|
         assert trade.size.positive?
         @client.websocket.stop
