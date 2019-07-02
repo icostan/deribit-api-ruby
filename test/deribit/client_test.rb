@@ -227,6 +227,8 @@ class Deribit::ClientTest < Minitest::Test
         assert result.order.quantity.positive?
         assert_equal 'open', result.order.state
         assert_empty result.trades
+
+        @client.cancelall
         @client.websocket.stop
       end
     end
@@ -245,6 +247,7 @@ class Deribit::ClientTest < Minitest::Test
         assert result.order.quantity.positive?
         assert_equal 'open', result.order.state
         assert_empty result.trades
+
         @client.cancelall
         @client.websocket.stop
       end
@@ -283,6 +286,7 @@ class Deribit::ClientTest < Minitest::Test
       @client.cancel result.order.orderId do |result|
         assert_equal 'cancelled', result.order.state
 
+        @client.cancelall
         @client.websocket.stop
       end
     end
@@ -312,9 +316,9 @@ class Deribit::ClientTest < Minitest::Test
     end
 
     def test_orders_websocket
-      @client.buy 'BTC-PERPETUAL', 9, price: 1000
+      @client.buy 'BTC-PERPETUAL', 10, price: 1000
       @client.orders do |order|
-        assert_equal 9, order.quantity
+        assert_equal 10, order.quantity
 
         @client.cancelall
         @client.websocket.stop
