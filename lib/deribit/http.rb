@@ -9,7 +9,7 @@ module Deribit
         f.response :mashify
         f.response :json
         f.use Deribit::Authentication, key, secret
-        f.response :logger if debug
+        f.response :detailed_logger if debug
         f.adapter Faraday.default_adapter
       end
     end
