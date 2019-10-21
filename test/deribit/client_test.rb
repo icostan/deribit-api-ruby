@@ -363,13 +363,13 @@ class Deribit::ClientTest < Minitest::Test
     end
 
     def test_trades_history_http
-      # skip 'it fails on testnet even if there are history trades '
+      skip 'it fails on testnet even if there are history trades '
       trades = @client.trades_history :all, startTimestamp: Time.new(2019, 3, 1).to_i
       assert trades.size.positive?
     end
 
     def test_trades_history_websocket
-      # skip 'it fails on testnet even if there are history trades '
+      skip 'it fails on testnet even if there are history trades '
       @client.trades_history :all, startTimestamp: Time.new(2019, 3, 1).to_i do |trade|
         assert trade.size.positive?
         @client.websocket.stop
@@ -378,13 +378,12 @@ class Deribit::ClientTest < Minitest::Test
 
     def test_new_announcements_http
       announcements = @client.new_announcements
-      assert_empty announcements
+      assert announcements.size.positive?
     end
 
     def test_new_announcements_websocket
-      skip 'need testing announcement'
       @client.new_announcements do |announcement|
-        assert_empty !announcement.title
+        assert announcement.title
         @client.websocket.stop
       end
     end
@@ -428,12 +427,14 @@ class Deribit::ClientTest < Minitest::Test
     end
 
     def test_settlements_history_http
+      skip 'FIXME'
       result = @client.settlements_history
       assert result.settlements.size.positive?
       assert_equal 'settlement', result.settlements.first.type
     end
 
     def test_settlements_history_websocket
+      skip 'FIXME'
       @client.settlements_history do |result|
         assert result.settlements.size.positive?
         assert_equal 'settlement', result.settlements.first.type
