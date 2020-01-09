@@ -32,10 +32,11 @@
 ** cleanup 'params' for both http and websocket
 ** update buy/sell endpoints with new params
 ** TODO deribit-api-ruby maintenance
-   SCHEDULED: <2020-01-09 Thu +3m>
+   SCHEDULED: <2020-04-09 Thu +3m>
    :PROPERTIES:
-   :LAST_REPEAT: [2019-10-21 Mon 14:43]
+   :LAST_REPEAT: [2020-01-09 Thu 18:00]
    :END:
+   - State "DONE"       from "TODO"       [2020-01-09 Thu 18:00]
    - State "DONE"       from "TODO"       [2019-10-21 Mon 14:43]
    - State "DONE"       from "TODO"       [2019-07-02 Tue 13:01]
    - State "DONE"       from "TODO"       [2019-04-23 Tue 15:24]
