@@ -4,6 +4,7 @@ language: ruby
 cache: bundler
 rvm:
   - 2.6.3
+  - 2.7.0
 
 env:
   global:
