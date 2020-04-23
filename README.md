@@ -40,7 +40,7 @@ client = Deribit::Client.new
 client = Deribit::Client.new key: 'KEY', secret: 'SECRET'
 ```
 
-Get trades via HTTP APIs and idiomatic Ruby:
+Get trades via HTTP APIs:
 
 ```ruby
 trades = client.trades instrument_name: 'BTC-PERPETUAL', count: 3
@@ -50,7 +50,7 @@ trades.first.instrument_name
 => "BTC-PERPETUAL"
 ```
 
-Streaming trades via Websocket APIs and idiomatic Ruby:
+Streaming trades via Websocket APIs:
 
 ```ruby
 client.trades(instrument_name: 'BTC-PERPETUAL') do |trade|
