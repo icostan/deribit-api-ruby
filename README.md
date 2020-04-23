@@ -33,10 +33,10 @@ Or install it yourself as:
 ```ruby
 require 'deribit-api'
 
-# for public data only
-client = Deribit::Client.new
+# for public data
+client = Deribit::Client.new testnet: true, debug: true
 
-# for private data pass KEY and SECRET
+# pass KEY and SECRET to access private data
 client = Deribit::Client.new key: 'KEY', secret: 'SECRET'
 ```
 
@@ -57,6 +57,13 @@ client.trades(instrument_name: 'BTC-PERPETUAL') do |trade|
 	puts trade
 end
 => #<Hashie::Mash amount=10.0 direction="sell" index_price=7076.01 instrument_name="BTC-PERPETUAL" price=7076.0 tick_direction=3 timestamp=1587632546493 trade_id="73366877" trade_seq=45738278>
+```
+
+Place a buy limit order:
+
+```ruby
+result = client.buy 'BTC-PERPETUAL', 10, price: 2500
+=> #<Hashie::Mash order=#<Hashie::Mash amount=10 api=true average_price=0.0 commission=0.0 creation_timestamp=1587644442494 direction="buy" filled_amount=0 instrument_name="BTC-PERPETUAL" is_liquidation=false label="" last_update_timestamp=1587644442494 max_show=10 order_id="3887469320" order_state="open" order_type="limit" post_only=false price=2500.0 profit_loss=0.0 reduce_only=false replaced=false time_in_force="good_til_cancelled" web=false> trades=#<Hashie::Array []>>
 ```
 
 Access generic HTTP API endpoints: <https://docs.deribit.com/#market-data>
@@ -82,6 +89,19 @@ Fetch all tradable instruments:
 instruments = client.instruments
 instruments.first
 => #<Hashie::Mash base_currency="BTC" contract_size=1.0 creation_timestamp=1587024008000 expiration_timestamp=1588320000000 instrument_name="BTC-1MAY20-6750-C" is_active=true kind="option" maker_commission=0.0004 min_trade_amount=0.1 option_type="call" quote_currency="USD" settlement_period="week" strike=6750.0 taker_commission=0.0004 tick_size=0.0005>
+```
+
+Place a buy market order:
+
+```ruby
+result = client.buy 'BTC-PERPETUAL', 10, type: :market
+=> #<Hashie::Mash order=#<Hashie::Mash amount=10 api=true average_price=7153.0 commission=1.05e-06 creation_timestamp=1587644532209 direction="buy" filled_amount=10 instrument_name="BTC-PERPETUAL" is_liquidation=false label="" last_update_timestamp=1587644532209 max_show=10 order_id="3887472638" order_state="filled" order_type="market" post_only=false price=7259.0 profit_loss=0.0 reduce_only=false replaced=false time_in_force="good_til_cancelled" web=false> trades=#<Hashie::Array [#<Hashie::Mash amount=10.0 direction="buy" fee=1.05e-06 fee_currency="BTC" index_price=7155.93 instrument_name="BTC-PERPETUAL" liquidity="T" matching_id=nil order_id="3887472638" order_type="market" post_only=false price=7153.0 reduce_only=false self_trade=false state="filled" tick_direction=1 timestamp=1587644532209 trade_id="45283496" trade_seq=27671015>]>>
+```
+
+Close a position:
+```ruby
+result = client.close 'BTC-PERPETUAL'
+=> #<Hashie::Array [#<Hashie::Mash amount=10.0 direction="sell" fee=1.05e-06 fee_currency="BTC" index_price=7153.91 instrument_name="BTC-PERPETUAL" liquidity="T" matching_id=nil order_id="3887474840" order_type="market" post_only=false price=7148.0 reduce_only=true self_trade=false state="filled" tick_direction=2 timestamp=1587644595002 trade_id="45283521" trade_seq=27671036>]>
 ```
 
 Orderbook for BTCUSD perpetual instrument:

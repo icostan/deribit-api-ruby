@@ -201,7 +201,7 @@ module Deribit
     end
 
     # Places a sell order for an instrument.
-    # @param instrument [String] Name of the instrument to sell
+    # @param instrument_name [String] Name of the instrument to sell
     # @param amount [Integer] The number of contracts to buy
     # @!macro deribit.options
     # @return [Hashie::Mash] the details of new order
@@ -209,6 +209,19 @@ module Deribit
     def sell(instrument_name, amount, options = {})
       params = options.merge instrument_name: instrument_name, amount: amount
       http.get '/private/sell', params
+    end
+
+    # Close a position
+    # @param instrument_name [String] Name of the instrument to sell
+    # @param type [String]
+    # @param options [Hash] the options
+    # @option options [String] :type The order type: limit or market
+    # @option options [String] :price Price for limit close
+    # @return [Hashie::Mash] the details of closed position
+    # @see https://docs.deribit.com/#private-sell
+    def close(instrument_name, options = { type: :market })
+      params = options.merge instrument_name: instrument_name, type: options[:type]
+      http.get '/private/close_position', params
     end
 
     # Changes price and/or quantity of the own order.

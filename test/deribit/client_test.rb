@@ -111,7 +111,7 @@ class Deribit::ClientTest < Minitest::Test
     def test_private_by_instrument_http
       instrument_name = 'BTC-PERPETUAL'
       trades = @client.trades instrument_name: instrument_name, count: 3, private: true
-      assert_equal 2, trades.size
+      assert_equal 3, trades.size
     end
 
     def test_public_by_instrument_websocket
@@ -172,11 +172,20 @@ class Deribit::ClientTest < Minitest::Test
   def test_buy_http
     result = @client.buy 'BTC-PERPETUAL', 10, price: 2500
     assert !result.order.order_id.nil?
-    assert result.order.amount.positive?
+    assert_equal 10, result.order.amount
     assert_equal 'open', result.order.order_state
     assert_empty result.trades
-
     @client.cancel result.order.order_id
+
+    sleep 5
+
+    result = @client.buy 'BTC-PERPETUAL', 10, type: :market
+    assert !result.order.order_id.nil?
+    assert_equal 10, result.order.amount
+    assert result.trades.size > 0
+    result = @client.close 'BTC-PERPETUAL'
+    assert 'filled', result.order.order_state
+    assert result.trades.size > 0
   end
 
   def test_sell_http
