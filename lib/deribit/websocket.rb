@@ -1,8 +1,11 @@
+# frozen_string_literal: true
+
 module Deribit
   # Websocket API
-  # @see https://docs.deribit.com/api-websocket.html
+  # @author Iulian Costan (deribit-api@iuliancostan.com)
+  # @see https://docs.deribit.com/#subscriptions
   class Websocket
-    attr_reader :host, :key, :secret
+    attr_reader :host, :key, :secret, :access_token, :callbacks
 
     # Create new websocket instance
     # @param host [String] the underlying host to connect to
@@ -14,6 +17,7 @@ module Deribit
       @key = key
       @secret = secret
       @callbacks = {}
+      @ws = nil
     end
 
     # Subscribe to a specific topic and optionally filter by symbol
@@ -21,85 +25,100 @@ module Deribit
     # @param params [Hash] the arguments for subscription
     # @yield [Array] data payload
     def subscribe(topic, params: {}, &callback)
-      raise 'callback block is required' unless block_given?
+      raise 'block is required' unless block_given?
 
-      EM.run do
-        connect
+      # connect on demand
+      @ws = connect unless connected?
+      raise 'websocket is closed' unless @ws.open?
 
-        # request id
-        id = Time.now.to_i
-        @callbacks[id] = callback
+      # save callback handler
+      @callbacks[topic.to_s] = callback
 
-        # request action
-        auth = params.delete :auth
-        uri = auth ? 'private' : 'public'
-        action = "/api/v1/#{uri}/#{topic}"
+      # authorize if needed
+      authorize if authorization_required?(topic)
 
-        payload = { id: id, action: action, arguments: params }
-        payload[:sig] = signature id, action, params if auth
-
-        @faye.send payload.to_json.to_s
-      end
+      # subscription request
+      payload = {
+        jsonrpc: '2.0',
+        method: 'public/subscribe',
+        id: rand(9999),
+        params: { channels: [topic] }
+      }
+      @ws.send payload.to_json.to_s
     end
 
-    # Stop websocket listener
-    def stop
-      EM.stop_event_loop
+    def authorized?
+      !access_token.nil?
     end
 
     private
 
-    def signature(nonce, action, params)
-      payload = {
-        _: nonce,
-        _ackey: @key,
-        _acsec: @secret,
-        _action: action
-      }
-      payload.merge! params
-      # query = env['url'].query
+    def connected?
+      !@ws.nil?
+    end
 
-      Deribit.signature @key, nonce, payload, nil
+    def authorization_required?(topic)
+      topic.include? 'user'
+    end
+
+    def authorize
+      timestamp = Time.now.utc.to_i * 1000
+      nonce = rand(999_999).to_s
+      signature = Deribit.signature timestamp, nonce, '', @secret
+      payload = {
+        jsonrpc: '2.0',
+        method: 'public/auth',
+        id: 'auth',
+        params: {
+          grant_type: :client_signature,
+          client_id: @key,
+          timestamp: timestamp,
+          nonce: nonce,
+          data: '',
+          signature: signature
+        }
+      }
+      @callbacks['auth'] = lambda do |result|
+        @access_token = result['access_token']
+      end
+      @ws.send payload.to_json.to_s
     end
 
     def websocket_url
-      "wss://#{host}/ws/api/v1/"
-    end
-
-    def headers
-      {}
+      "wss://#{host}/ws/api/v2"
     end
 
     def connect
-      @result = nil
-      @faye = Faye::WebSocket::Client.new websocket_url, [], headers: headers
-      @faye.on :open do |_event|
-        # puts [:open, event.data]
+      websocket = self
+      ws = WebSocket::Client::Simple.connect websocket_url
+      ws.on :open do |event|
+        # puts [:open, event]
       end
-      @faye.on :error do |event|
-        raise event.message
+      ws.on :error do |event|
+        # puts [:error, event.inspect]
       end
-      @faye.on :close do |_event|
+      ws.on :close do |event|
         # puts [:close, event.reason]
-        @faye = nil
+        ws = nil
       end
-      @faye.on :message do |event|
+      ws.on :message do |event|
         json = JSON.parse event.data
-        id = json['id']
-        data = json['result'] || json['message']
-
-        callback = @callbacks[id]
-        # TODO: rewrite this part
-        if callback && data
-          data = [data] unless data.is_a? Array
-          data.each do |payload|
-            payload = Hashie::Mash.new payload if payload.is_a? Hash
-            @result = callback.yield payload, @result
+        if json['method'] == 'subscription'
+          id = json['params']['channel']
+          data = json['params']['data']
+          callback = websocket.callbacks[id]
+          data = [data] if data.is_a? Hash
+          data.each do |datum|
+            @result = callback.yield Hashie::Mash.new(datum)
           end
         else
-          puts "==> #{event.data}"
+          id = json['id']
+          callback = websocket.callbacks[id]
+          callback&.yield json['result']
         end
       end
+      until ws.open? do sleep 1 end # wait for opening
+      ws
     end
   end
 end

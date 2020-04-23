@@ -1,11 +1,11 @@
-module Deribit
-  # @author Iulian Costan
-  class Client
-    # URL for testnet
-    TESTNET_URL = 'test.deribit.com'
-    # URL for mainnet
-    MAINNET_URL = 'www.deribit.com'
+# frozen_string_literal: true
 
+module Deribit
+  TESTNET_HOST = 'test.deribit.com'
+  MAINNET_HOST = 'www.deribit.com'
+
+  # @author Iulian Costan (deribit-api@iuliancostan.com)
+  class Client
     attr_reader :http, :websocket
 
     # Create new instance
@@ -15,469 +15,309 @@ module Deribit
     # @param debug [Boolean] set to true for debug output
     # @return [Deribit::Client] the instance of client
     def initialize(key: nil, secret: nil, testnet: false, debug: false)
-      host = testnet ? TESTNET_URL : MAINNET_URL
-      @http = Deribit::Http.new host, key: key, secret: secret
+      host = testnet ? TESTNET_HOST : MAINNET_HOST
+      @http = Deribit::Http.new host, key: key, secret: secret, debug: debug
       @websocket = Deribit::Websocket.new host, key: key, secret: secret
     end
 
-    # Retrieves the current time (in ms).
-    # @return [Integer] current time in milliseconds
-    # @yield [Integer] current time in milliseconds
-    # @see https://docs.deribit.com/rpc-endpoints.html#time
-    def time(&blk)
-      if block_given?
-        websocket.subscribe :time, &blk
-      else
-        http.get :time
-      end
-    end
-
-    # Signals the Websocket connection to send and request heartbeats.
-    # @param interval [Integer] The heartbeat interval
-    # @yield [String] 'ok' on success, error message otherwise
-    # @see https://docs.deribit.com/rpc-endpoints.html#setheartbeat
-    def enable_heartbeat(interval = 60, &blk)
-      raise 'This API endpoint cannot be used over HTTP.' unless block_given?
-
-      websocket.subscribe :setheartbeat, params: { interval: interval }, &blk
-    end
-
-    # Signals the Websocket connection to not send or request heartbeats.
-    # @yield [String] 'ok' on success, error message otherwise
-    # @see https://docs.deribit.com/rpc-endpoints.html#cancelheartbeat
-    def cancel_heartbeat(&blk)
-      raise 'This API endpoint cannot be used over HTTP.' unless block_given?
-
-      websocket.subscribe :cancelheartbeat, &blk
-    end
-
-    # Tests the connection to the API server, and returns its version.
-    # @param exception [any] Provide this parameter force an error message.
-    # @return [Hashie::Mash] test data
-    # @yield [Hashie::Mash] test data
-    # @see https://docs.deribit.com/rpc-endpoints.html#test
-    def test(exception: false, &blk)
-      params = { exception: exception }
-      if block_given?
-        websocket.subscribe :test, params: params, &blk
-      else
-        http.get :test, params: params, raw_body: true
-      end
-    end
-
-    # This API endpoint always responds with "pong".
-    # @return [String] pong
-    # @yield [String] pong
-    # @see https://docs.deribit.com/rpc-endpoints.html#ping
-    def ping(&blk)
-      if block_given?
-        websocket.subscribe :ping, &blk
-      else
-        http.get :ping
-      end
-    end
-
     # Retrieves available trading instruments.
-    # @param expired [Boolean] Set to true to show expired instruments instead of active ones.
+    # @param options [Hash]
+    # @option options [String] :currency the currency to get instruments for
+    # @option options [String] :kind instrument kind, if not provided instruments of all kinds are considered
+    # @option options [Integer] :expired set to true to show expired instruments instead of active ones.
     # @return [Array] the list of instruments
-    # @yield [Hashie::Mash] the instrument
-    # @see https://docs.deribit.com/rpc-endpoints.html#getinstruments
-    def instruments(expired: false, &blk)
-      params = { expired: expired }
-      if block_given?
-        websocket.subscribe :getinstruments, params: params, &blk
-      else
-        http.get :getinstruments, params: params
-      end
+    # @see https://docs.deribit.com/#public-get_instruments
+    def instruments(options = { currency: 'BTC' })
+      raise ArgumentError, 'currency is required' unless options[:currency]
+
+      http.get '/public/get_instruments', options
     end
 
     # Retrieves all cryptocurrencies supported by the API.
     # @return [Array] the list of cryptocurrencies
-    # @yield [Hashie:Hash] the currency
     # @see https://docs.deribit.com/rpc-endpoints.html#getcurrencies
-    def currencies(&blk)
-      if block_given?
-        websocket.subscribe :getcurrencies, &blk
-      else
-        http.get :getcurrencies
-      end
+    def currencies
+      http.get '/public/get_currencies'
     end
 
     # Retrieves the current index price for the BTC-USD instruments.
-    # @param currency [String] the currency to get index for
+    # @param options [Hash]
+    # @option options [String] :currency the currency to get instruments for
     # @return [Hashie::Mash] index price for BTC-USD instrument
-    # @yield [Hashie::Mash] index price for BTC-USD instrument
     # @see https://docs.deribit.com/rpc-endpoints.html#index
-    def index(currency = 'BTC', &blk)
-      params = { currency: currency }
-      if block_given?
-        websocket.subscribe :index, params: params, &blk
-      else
-        http.get :index, params: params
+    def index(options = { currency: 'BTC' })
+      unless options[:currency]
+        raise ArgumentError, 'currency argument is required'
       end
+
+      http.get '/public/get_index', options
     end
 
-    # Retrieves the order book, along with other market values for a given instrument.
-    # @param instrument [String] The instrument name for which to retrieve the order book, (see #instruments)  to obtain instrument names.
-    # @param depth [Integer] the depth of the order book
+    # Notifies about changes to the order book for a certain instrument.
+    # @param instrument_name [String] The instrument name
+    # @param options [Hash]
+    # @option options [String] :instrument_name (BTC-PERPETUAL) Instrument to return open orders for
+    # @option options [Integer] :group (5) Group prices (by rounding): none, 5, 10
+    # @option options [Integer] :depth (10) the depth of the order book
+    # @option options [String] :interval (raw) Frequency of notifications: raw, 100ms
     # @return [Hashie::Mash] the order book
     # @yield [Hashie::Mash] the order book
-    # @see https://docs.deribit.com/rpc-endpoints.html#getorderbook
-    def orderbook(instrument, depth: 10, &blk)
-      raise ArgumentError, 'instrument param is required' unless instrument
+    # @see https://docs.deribit.com/#book-instrument_name-group-depth-interval
+    # @see https://docs.deribit.com/#book-instrument_name-interval
+    def book(options = { instrument_name: 'BTC-PERPETUAL' }, &blk)
+      unless options[:instrument_name]
+        raise ArgumentError, 'instrument_name argument is required'
+      end
 
-      params = { instrument: instrument, depth: depth }
       if block_given?
-        websocket.subscribe :getorderbook, params: params, &blk
+        channel = Naming.book_channel options
+        websocket.subscribe channel, params: {}, &blk
       else
-        http.get :getorderbook, params: params
+        http.get '/public/get_order_book', options
       end
     end
 
-    # Retrieve the latest trades that have occurred for a specific instrument.
-    # @param instrument [String] Either the name of the instrument, or "all" for all active instruments, "futures" for all active futures, or "options" for all active options.
+    # Retrieve the latest trades that have occurred for instruments in a specific currency symbol/for a specific instrument and optionally within given time range.
     # @!macro deribit.filters
-    #   @param filters [Hash] extra filters to apply
-    #   @option filters [Integer] :count (10) The number of trades returned (clamped to max 1000)
-    #   @option filters [Integer] :startId The ID of the first trade to be returned
-    #   @option filters [Integer] :endId The ID of the last trade to be returned
-    #   @option filters [Integer] :startSeq The trade sequence of the first trade to be returned
-    #   @option filters [Integer] :endSeq The trade sequence of the last trade to be returned
-    #   @option filters [Integer] :startTimestamp The timestamp (in ms) of the first trade to be returned
-    #   @option filters [Integer] :endTimestamp The timestamp (in ms) of the last trade to be returned
-    #   @option filters [Boolean] :includeOld (false) to get archived trades for expired instruments when true (added from performance considerations)
+    #   @param filters [Hash] filters to apply
+    #   @option filters [String] :instrument_name (BTC-PERPETUAL) Instrument name
+    #   @option filters [String] :currency (BTC, ETH) The currency symbol
+    #   @option filters [String] :kind (future, option) Instrument kind, if not provided instruments of all kinds are considered
+    #   @option filters [Integer] :count (10) Number of requested items
+    #   @option filters [Integer] :start_id The ID of the first trade to be returned
+    #   @option filters [Integer] :end_id The ID of the last trade to be returned
+    #   @option filters [Integer] :start_seq The trade sequence of the first trade to be returned
+    #   @option filters [Integer] :end_seq The trade sequence of the last trade to be returned
+    #   @option filters [Integer] :start_timestamp The timestamp (in ms) of the first trade to be returned
+    #   @option filters [Integer] :end_timestamp The timestamp (in ms) of the last trade to be returned
+    #   @option filters [Boolean] :include_old (false) Include trades older than a few recent days
+    #   @option filters [Boolean] :sorting (none) Direction of results sorting
+    #   @option filters [String] :interval (raw) Frequency of notifications.
     # @return [Array] the list of trades
     # @yield [Hashie::Mash] new trade
-    # @see https://docs.deribit.com/rpc-endpoints.html#getlasttrades
-    def trades(instrument = :all, filters = {}, &blk)
-      raise ArgumentError, 'instrument param is required' unless instrument
-
-      params = filters.merge(instrument: instrument)
-      if block_given?
-        websocket.subscribe :getlasttrades, params: params, &blk
-      else
-        http.get :getlasttrades, params: params
+    # @see https://docs.deribit.com/#public-get_last_trades_by_currency
+    # @see https://docs.deribit.com/#public-get_last_trades_by_currency_and_time
+    # @see https://docs.deribit.com/#public-get_last_trades_by_instrument
+    # @see https://docs.deribit.com/#public-get_last_trades_by_instrument_and_time
+    # @see https://docs.deribit.com/#private-get_user_trades_by_currency
+    # @see https://docs.deribit.com/#private-get_user_trades_by_currency_and_time
+    # @see https://docs.deribit.com/#private-get_user_trades_by_instrument
+    # @see https://docs.deribit.com/#private-get_user_trades_by_instrument_and_time
+    # @see https://docs.deribit.com/#trades-instrument_name-interval
+    # @see https://docs.deribit.com/#trades-kind-currency-interval
+    # @see https://docs.deribit.com/#user-trades-instrument_name-interval
+    # @see https://docs.deribit.com/#user-trades-kind-currency-interval
+    def trades(filters, &blk)
+      instrument_name = filters[:instrument_name]
+      currency = filters[:currency]
+      unless instrument_name || currency
+        raise ArgumentError, 'either :instrument_name or :currency args is required'
       end
-    end
 
-    # Retrieves the summary information such as open interest, 24h volume, etc. for a specific instrument.
-    # @param instrument [String] Either the name of the instrument, or 'all' for all active instruments, 'futures' for all active futures, or 'options' for all active options.
-    # @return [Array, Hashie::Mash] the summary as array or hash based on instrument param
-    # @yield [Hashie::Mash] the summary
-    # @see https://docs.deribit.com/rpc-endpoints.html#getsummary
-    def summary(instrument = :all, &blk)
-      raise ArgumentError, 'instrument argument is required' unless instrument
-
-      params = { instrument: instrument }
       if block_given?
-        websocket.subscribe :getsummary, params: params, &blk
+        channel = Naming.trades_channel filters
+        websocket.subscribe channel, params: {}, &blk
       else
-        http.get :getsummary, params: params
-      end
-    end
-
-    # Retrieves aggregated 24h trade volumes for different instrument types.
-    # @return [Hashie::Mash] the statistics
-    # @yield [Hashie::Mash] the statistics
-    # @see https://docs.deribit.com/rpc-endpoints.html#stats
-    def stats(&blk)
-      if block_given?
-        websocket.subscribe :stats, &blk
-      else
-        http.get :stats
+        uri = Naming.trades_uri filters
+        response = http.get uri, filters
+        response.trades
       end
     end
 
     # Retrieves announcements from last 30 days.
     # @return [Array] the list of announcements
     # @yield [Hashie::Mash] the announcement
-    # @see https://docs.deribit.com/rpc-endpoints.html#getannouncements
+    # @see https://docs.deribit.com/#public-get_announcements
+    # @see https://docs.deribit.com/#announcements
     def announcements(&blk)
       if block_given?
-        websocket.subscribe :getannouncements, &blk
+        websocket.subscribe 'announcements', &blk
       else
-        http.get :getannouncements
+        http.get '/public/get_announcements'
       end
     end
 
     # Retrieves settlement, delivery and bankruptcy events that have occurred.
     # @param filters [Hash] the filters
-    # @option filters [String] :instrument The instrument name, or "all" to retrieve settlements for all instruments
-    # @option filters [Integer] :count (10) The number of entries to be returned. This is clamped to max 1000
-    # @option filters [String] :type The type of settlements to return. Possible values "settlement", "delivery", "bankruptcy"
-    # @option filters [Integer] :startTstamp The latest timestamp to return result for
-    # @option filters [String] :continuation Continuation token for pagination. Each response contains a token to be used for continuation
+    # @option filters [String] :instrument_name The instrument name,
+    # @option filters [String] :currency The currency of settlements
+    # @option filters [String] :type settlement type: settlement delivery bankruptcy
+    # @option filters [Integer] :count (20) Number of requested items, default
+    # @option filters [String] :continuation Continuation token for pagination
     # @return [Hashie::Mash] the settlements
     # @yield [Hashie::Mash] the settlements
-    # @see https://docs.deribit.com/rpc-endpoints.html#getlastsettlements
-    def settlements(filters = {}, &blk)
+    # @see https://docs.deribit.com/#public-get_last_settlements_by_instrument
+    # @see https://docs.deribit.com/#public-get_last_settlements_by_currency
+    def settlements(filters = { instrument_name: 'BTC-PERPETUAL' })
+      instrument_name = filters[:instrument_name]
+      currency = filters[:currency]
+      unless instrument_name || currency
+        raise ArgumentError, 'either :instrument_name or :currency arg is required'
+      end
+
       if block_given?
-        websocket.subscribe :getlastsettlements, params: filters, &blk
+        raise Deribit::NotImplementedError, 'not implemented'
       else
-        http.get :getlastsettlements, params: filters
+        http.get '/public/get_last_settlements_by_instrument', filters
       end
     end
 
     # Retrieves user account summary.
+    # @param currency [String] Currency summary
     # @param ext [Boolean] Requests additional fields
     # @return [Hashie::Mash] the account details
     # @yield [Hashie::Mash] the account details
     # @see https://docs.deribit.com/rpc-endpoints.html#account
-    def account(ext: false, &blk)
+    def account(currency: 'BTC', ext: false)
       if block_given?
-        websocket.subscribe :account, params: { auth: true }, &blk
+        raise Deribit::NotImplementedError, 'not implemented'
       else
-        http.get :account, auth: true
+        http.get '/private/get_account_summary', currency: currency
       end
     end
 
     # Places a buy order for an instrument.
-    # @param instrument [String] Name of the instrument to buy
-    # @param quantity [Integer] The number of contracts to buy
+    # @param instrument_name [String] Name of the instrument to buy
+    # @param amount [Integer] The number of contracts to buy
     # @!macro deribit.options
     #   @param options [Hash] more options for the order
     #   @option options [String] :type (limit) The order type, possible types: "limit", "stop_limit", "market", "stop_market"
-    #   @option options [Float] :price The order price (Only valid for limit and stop_limit orders)
     #   @option options [String] :label user defined label for the order (maximum 32 characters)
+    #   @option options [Float] :price The order price (Only valid for limit and stop_limit orders)
     #   @option options [String] :time_in_force (good_til_cancelled) Specifies how long the order remains in effect, possible values "good_til_cancelled", "fill_or_kill", "immediate_or_cancel"
     #   @option options [Integer] :max_show Maximum quantity within an order to be shown to other customers, 0 for invisible order.
     #   @option options [String] :post_only (true)  If true, the order is considered post-only. If the new price would cause the order to be filled immediately (as taker), the price will be changed to be just below the bid.
-    #   @option options [Float] :stopPx Stop price required for stop limit orders (Only valid for stop orders)
-    #   @option options [String] :execInst (index_price) Defines trigger type, required for "stop_limit" order type, possible values "index_price", "mark_price" (Only valid for stop orders)
-    #   @option options [String] :adv Advanced option order type, can be "implv", "usd". (Only valid for options)
+    #   @option options [String] :reject_post_only (false) If order is considered post-only and this field is set to true than order is put to order book unmodified or request is rejected.
+    #   @option options [String] :reduce_only  If true, the order is considered reduce-only which is intended to only reduce a current position
+
+    #   @option options [Float] :stop_price price required for stop limit orders (Only valid for stop orders)
+    #   @option options [String] :trigger Defines trigger type: index_price mark_price last_price, required for "stop_limit" order type
+    #   @option options [String] :advanced Advanced option order type, can be "implv", "usd". (Only valid for options)
     # @return [Hashie::Mash] the details of new order
-    # @yield [Hashie::Mash] the details of new order
-    # @see https://docs.deribit.com/rpc-endpoints.html#buy
-    def buy(instrument, quantity, options = {}, &blk)
-      params = { instrument: instrument, quantity: quantity, price: options[:price] }
-      if block_given?
-        websocket.subscribe :buy, params: params.merge(auth: true), &blk
-      else
-        http.post :buy, params
-      end
+    # @see https://docs.deribit.com/#private-buy
+    def buy(instrument_name, amount, options = {})
+      params = options.merge instrument_name: instrument_name, amount: amount
+      http.get 'private/buy', params
     end
 
     # Places a sell order for an instrument.
     # @param instrument [String] Name of the instrument to sell
-    # @param quantity [Integer] The number of contracts to sell
+    # @param amount [Integer] The number of contracts to buy
     # @!macro deribit.options
     # @return [Hashie::Mash] the details of new order
-    # @yield [Hashie::Mash] the details of new order
-    # @see https://docs.deribit.com/rpc-endpoints.html#sell
-    def sell(instrument, quantity, options = {}, &blk)
-      params = options.merge instrument: instrument, quantity: quantity, auth: true
-      if block_given?
-        websocket.subscribe :sell, params: params, &blk
-      else
-        http.post :sell, params
-      end
+    # @see https://docs.deribit.com/#private-sell
+    def sell(instrument_name, amount, options = {})
+      params = options.merge instrument_name: instrument_name, amount: amount
+      http.get '/private/sell', params
     end
 
     # Changes price and/or quantity of the own order.
     # @param order_id [String] ID of the order to edit
-    # @param quantity [Integer] The new order quantity
+    # @param amount [Integer] The new order quantity
     # @param price [Float] The new order price
     # @param options [Hash] extra options
     # @option options [Boolean] :post_only If true, the edited order is considered post-only. If the new price would cause the order to be filled immediately (as taker), the price will be changed to be just below the bid (for buy orders) or just above the ask (for sell orders).
-    # @option options [String] :adv The new advanced order type (only valid for option orders)
-    # @option options [Float] :stopPx The new stop price (only valid for stop limit orders)
+    # @option options [Boolean] :reduce_only If true, the order is considered reduce-only which is intended to only reduce a current position
+    # @option options [Boolean] :reject_post_only If order is considered post-only and this field is set to true than order is put to order book unmodified or request is rejected.
+    # @option options [String] :advanced Advanced option order type. If you have posted an advanced option order, it is necessary to re-supply this parameter when editing it (Only for options)
+    # @option options [Float] :stop_price Stop price, required for stop limit orders (Only for stop orders)
     # @return [Hashie::Mash] the edited order
-    # @yield [Hashie::Mash] the edited order
-    # @see https://docs.deribit.com/rpc-endpoints.html#edit
-    def edit(order_id, quantity, price, options = {}, &blk)
-      params = options.merge orderId: order_id, quantity: quantity, price: price, auth: true
-      if block_given?
-        websocket.subscribe :edit, params: params, &blk
-      else
-        http.post :edit, params
-      end
+    # @see https://docs.deribit.com/#private-edit
+    def edit(order_id, amount, price, options = {})
+      params = options.merge order_id: order_id, amount: amount, price: price
+      http.get '/private/edit', params
     end
 
     # Cancels an order, specified by order id.
     # @param order_id [String] The order id of the order to be cancelled
     # @return [Hashie::Mash] details of the cancelled order
-    # @yield [Hashie::Mash] details of the cancelled order
-    # @see https://docs.deribit.com/rpc-endpoints.html#cancel
-    def cancel(order_id, &blk)
-      params = { orderId: order_id, auth: true }
-      if block_given?
-        websocket.subscribe :cancel, params: params, &blk
-      else
-        http.post :cancel, params
-      end
+    # @see https://docs.deribit.com/#private-cancel
+    def cancel(order_id)
+      http.get '/private/cancel', order_id: order_id
     end
 
     # Cancels all orders, optionally filtered by instrument or instrument type.
-    # @param type [all futures options] Which type of orders to cancel. Valid values are "all", "futures", "options"
     # @param options [Hash] extra options
-    # @option options [String] :instrument The name of the instrument for which to cancel all orders
+    # @option options [String] :instrument_name The name of the instrument for which to cancel all orders
+    # @option options [String] :currency The currency symbol
+    # @option options [String] :type Which type of orders to cancel. Valid values are "all", "futures", "options"
+    # @option options [String] :kind Instrument kind, if not provided instruments of all kinds are considered
     # @return [Boolean] success or not
-    # @yield [Boolean] success or not
-    # @see https://docs.deribit.com/rpc-endpoints.html#cancelall
-    def cancelall(type = :all, options = {}, &blk)
-      params = options.merge type: type, auth: true
+    # @see https://docs.deribit.com/#private-cancel_all
+    # @see https://docs.deribit.com/#private-cancel_all_by_currency
+    # @see https://docs.deribit.com/#private-cancel_all_by_instrument
+    def cancel_all(options = {})
+      uri = Naming.cancel_uri options
+      http.get uri, options
+    end
+
+    # Best bid/ask price and size.
+    # @param options [Hash]
+    # @option options [String] :instrument_name (BTC-PERPETUAL) Instrument to return open orders for
+    # @see https://docs.deribit.com/?shell#quote-instrument_name
+    def quote(options = { instrument_name: 'BTC-PERPETUAL' }, &blk)
+      unless block_given?
+        raise 'block is missing, HTTP-RPC not supported for this endpoint'
+      end
+
+      channel = Naming.channel_for_instrument 'quote', options
+      websocket.subscribe channel, params: options, &blk
+    end
+
+    # Key information about the instrument
+    # @param options [Hash]
+    # @option options [String] :instrument_name (BTC-PERPETUAL) Instrument to return open orders for
+    # @option options [String] :interval (raw) Frequency of notifications: raw, 100ms
+    # @see https://docs.deribit.com/?shell#ticker-instrument_name-interval
+    def ticker(options = { instrument_name: 'BTC-PERPETUAL' }, &blk)
       if block_given?
-        websocket.subscribe :cancelall, params: params, &blk
+        channel = Naming.channel 'ticker', options
+        websocket.subscribe channel, params: options, &blk
       else
-        http.post :cancelall, params
+        http.get '/public/ticker', options
       end
     end
 
     # Retrieves open orders.
     # @param options [Hash]
-    # @option options [String] :instrument Instrument to return open orders for
-    # @option options [string] ;orderId order ID
-    # @option options [String] :type Order types to return. Valid values include "limit", "stop_limit", "any"
+    # @option options [String] :instrument_name (BTC-PERPETUAL) Instrument to return open orders for
+    # @option options [string] :kind  (any) Instrument kind, future, option or any
+    # @option options [String] :currency (any) The currency symbol, BTC, ETH, any
+    # @option options [String] :interval (raw) Frequency of notifications: raw, 100ms
     # @return [Array] the list of open orders
     # @yield [Hashie::Mash] the order
     # @see https://docs.deribit.com/rpc-endpoints.html#getopenorders
-    def orders(options = {}, &blk)
+    def orders(options = { instrument_name: 'BTC-PERPETUAL' }, &blk)
       if block_given?
-        websocket.subscribe :getopenorders, params: options.merge(auth: true), &blk
+        channel = Naming.channel 'user.orders', options
+        websocket.subscribe channel, params: options, &blk
       else
-        http.get :getopenorders, auth: true, params: options
+        http.get '/private/get_open_orders_by_instrument', options
       end
     end
 
     # Retrieves current positions.
-    # @return [Array] the list of positions
-    # @yield [Hashie::Mash] the position
-    # @see https://docs.deribit.com/rpc-endpoints.html#positions
-    def positions(&blk)
-      params = { auth: true }
-      if block_given?
-        websocket.subscribe :positions, params: params, &blk
-      else
-        http.get :positions, params
-      end
-    end
-
-    # Retrieves history of orders that have been partially or fully filled.
     # @param options [Hash]
-    # @option options [String] :instrument Instrument to return open orders for
-    # @option options [String] :count The number of items to be returned.
-    # @option options [string] :offset The offset for pagination
-    # @return [Array] the list of history orders
-    # @yield [Hashie::Mash] the order
-    # @see https://docs.deribit.com/rpc-endpoints.html#orderhistory
-    def orders_history(options = {}, &blk)
-      if block_given?
-        websocket.subscribe :orderhistory, params: options.merge(auth: true), &blk
-      else
-        http.get :orderhistory, auth: true, params: options
-      end
+    # @option options [String] :currency (any) The currency symbol, BTC, ETH
+    # @option options [string] :kind  (any) Instrument kind, future, option
+    # @return [Array] the list of positions
+    # @see https://docs.deribit.com/rpc-endpoints.html#positions
+    def positions(options = { currency: 'BTC' })
+      http.get '/private/get_positions', options
     end
 
     # Retrieve order details state by order id.
     # @param order_id [String] the ID of the order to be retrieved
     # @return [Hashie::Mash] the details of the order
     # @yield [Hashie::Mash] the details of the order
-    # @see https://docs.deribit.com/rpc-endpoints.html#orderstate
-    def order(order_id, &blk)
-      params = { orderId: order_id, auth: true }
-      if block_given?
-        websocket.subscribe :orderstate, params: params, &blk
-      else
-        http.get :orderstate, auth: true, params: params
-      end
-    end
-
-    # Retrieve the trade history of the account
-    # @param instrument [String] Either the name of the instrument, or "all" for instruments, "futures" for all futures, or "options" for all options.
-    # @!macro deribit.filters
-    # @return [Array] the list of trades
-    # @yield [Hashie::Mash] the trade
-    # @see https://docs.deribit.com/rpc-endpoints.html?q=#tradehistory
-    def trades_history(instrument = :all, filters = {}, &blk)
-      params = filters.merge(instrument: instrument, auth: true)
-      if block_given?
-        websocket.subscribe :tradehistory, params: params, &blk
-      else
-        http.get :tradehistory, auth: true, params: params
-      end
-    end
-
-    # Retrieves announcements that have not been marked read by the current user.
-    # @return [Array] the list of new announcements
-    # @yield [Hashie::Mash] the announcement
-    def new_announcements(&blk)
-      if block_given?
-        websocket.subscribe :newannouncements, params: { auth: true }, &blk
-      else
-        http.get :newannouncements, auth: true
-      end
-    end
-
-    # Logs out the websocket connection.
-    # @yield [Boolean] success or not
-    # @see https://docs.deribit.com/rpc-endpoints.html#logout
-    def logout(&blk)
-      raise 'This API endpoint cannot be used over HTTP.' unless block_given?
-
-      websocket.subscribe :logout, params: {}, &blk
-    end
-
-    # Enables or disables "COD" (cancel on disconnect) for the current connection.
-    # @param state [String] Whether COD is to be enabled for this connection. "enabled" or "disabled"
-    # @yield [Boolean] success or not
-    # @see https://docs.deribit.com/rpc-endpoints.html#cancelondisconnect
-    def cancelondisconnect(state, &blk)
-      raise 'This API endpoint cannot be used over HTTP.' unless block_given?
-
-      websocket.subscribe :cancelondisconnect, params: { state: state, auth: true }, &blk
-    end
-
-    # Retrieves the language to be used for emails.
-    # @return [String] the language name (e.g. "en", "ko", "zh")
-    # @yield [String] the language name (e.g. "en", "ko", "zh")
-    def getemaillang(&blk)
-      if block_given?
-        websocket.subscribe :getemaillang, params: { auth: true }, &blk
-      else
-        http.get :getemaillang, auth: true
-      end
-    end
-
-    # Changes the language to be used for emails.
-    # @param lang [String] the abbreviated language name. Valid values include "en", "ko", "zh"
-    # @return [Boolean] success or not
-    # @yield [Boolean] success or not
-    def setemaillang(lang, &blk)
-      if block_given?
-        websocket.subscribe :setemaillang, params: { lang: lang, auth: true }, &blk
-      else
-        http.post :setemaillang, lang: lang
-      end
-    end
-
-    # Marks an announcement as read, so it will not be shown in newannouncements
-    # @param announcement_id [String]  the ID of the announcement
-    # @return [String] ok
-    # @yield [String] ok
-    def setannouncementasread(announcement_id, &blk)
-      if block_given?
-        websocket.subscribe :setannouncementasread, params: { announcementid: announcement_id, auth: true }, &blk
-      else
-        http.post :setannouncementasread, announcementid: announcement_id
-      end
-    end
-
-    # Retrieves settlement, delivery and bankruptcy events that have affected your account.
-    # @param filters [Hash] the filters
-    # @option filters [String] :instrument The instrument name, or "all" to retrieve settlements for all instruments
-    # @option filters [Integer] :count (10) The number of entries to be returned. This is clamped to max 1000
-    # @option filters [String] :type The type of settlements to return. Possible values "settlement", "delivery", "bankruptcy"
-    # @option filters [Integer] :startTstamp The latest timestamp to return result for
-    # @option filters [String] :continuation Continuation token for pagination. Each response contains a token to be used for continuation
-    # @return [Hashie::Mash] the settlements
-    # @yield [Hashie::Mash] the settlement
-    # @see https://docs.deribit.com/rpc-endpoints.html#settlementhistory
-    def settlements_history(filters = {}, &blk)
-      if block_given?
-        websocket.subscribe :settlementhistory, params: filters.merge(auth: true), &blk
-      else
-        http.get :settlementhistory, auth: true, params: filters
-      end
-    end
+    # see https://docs.deribit.com/rpc-endpoints.html#orderstate
+    # def order(order_id, &blk)
+    #   params = { orderId: order_id, auth: true }
+    #   if block_given?
+    #     websocket.subscribe :orderstate, params: params, &blk
+    #   else
+    #     http.get :orderstate, auth: true, params: params
+    #   end
+    # end
   end
 end

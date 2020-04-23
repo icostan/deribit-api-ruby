@@ -1,4 +1,8 @@
 * Tasks                                                             :DERIBIT:
+  :PROPERTIES:
+  :CATEGORY: deribit
+  :CREATED:  20200309
+  :END:
 ** DONE Initial deribit gem release
    CLOSED: [2019-01-04 Fri] SCHEDULED: <2019-01-04 Fri>
 ** DONE public HTTP API
@@ -31,11 +35,13 @@
 ** research async websocket implementation
 ** cleanup 'params' for both http and websocket
 ** update buy/sell endpoints with new params
+** DONE initial 2.0 API implementaion
 ** TODO deribit-api-ruby maintenance
-   SCHEDULED: <2020-04-09 Thu +3m>
+   SCHEDULED: <2020-05-09 Sat +1m>
    :PROPERTIES:
-   :LAST_REPEAT: [2020-01-09 Thu 18:00]
+   :LAST_REPEAT: [2020-04-23 Thu 13:25]
    :END:
+   - State "DONE"       from "TODO"       [2020-04-23 Thu 13:25]
    - State "DONE"       from "TODO"       [2020-01-09 Thu 18:00]
    - State "DONE"       from "TODO"       [2019-10-21 Mon 14:43]
    - State "DONE"       from "TODO"       [2019-07-02 Tue 13:01]

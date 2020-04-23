@@ -7,10 +7,10 @@ Gem::Specification.new do |spec|
   spec.name          = 'deribit-api'
   spec.version       = Deribit::VERSION
   spec.authors       = ['Iulian Costan']
-  spec.email         = ['iulian.costan@gmail.com']
+  spec.email         = ['deribit-api@iuliancostan.com']
 
-  spec.summary       = %q{Ruby library for Deribit API}
-  spec.description   = %q{Ruby library for Deribit API}
+  spec.summary       = %q{Idiomatic Ruby library for Deribit API 2.0}
+  spec.description   = %q{Idiomatic Ruby library for Deribit API 2.0}
   spec.homepage      = 'https://github.com/icostan/deribit-api-ruby'
 
   # Prevent pushing this gem to RubyGems.org. To allow pushes either set the 'allowed_push_host'
@@ -37,9 +37,9 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency 'faraday'
   spec.add_dependency 'faraday_middleware'
-  spec.add_dependency 'hashie'
-  spec.add_dependency 'faye-websocket'
   spec.add_dependency 'faraday-detailed_logger'
+  spec.add_dependency 'websocket-client-simple'
+  spec.add_dependency 'hashie'
 
   spec.add_development_dependency 'bundler'
   spec.add_development_dependency 'dotenv'
@@ -50,4 +50,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'pry-doc'
   spec.add_development_dependency 'reek'
   spec.add_development_dependency 'simplecov'
+  spec.add_development_dependency 'rubocop'
+  spec.add_development_dependency 'solargraph'
+  spec.add_development_dependency 'irb'
 end

@@ -3,7 +3,7 @@ require 'digest'
 
 module Deribit
   # Deribit authentication implemented as Faraday middleware
-  # @see https://docs.deribit.com/rpc-authentication.html
+  # @see https://docs.deribit.com/#authentication
   class Authentication < Faraday::Middleware
     def initialize(app, key, secret)
       super(app)
@@ -12,25 +12,20 @@ module Deribit
     end
 
     def call(env)
+      return @app.call(env) if env['url'].path.include? 'public'
       return @app.call(env) if @key.nil? || @secret.nil?
 
-      nonce = Time.now.to_i
-      env['request_headers']['X-Deribit-Sig'] = signature env, nonce
+      timestamp = Time.now.utc.to_i * 1000
+      nonce = rand(999999)
+      env.request_headers['Authorization'] = header env, timestamp, nonce
 
       @app.call env
     end
 
-    def signature(env, nonce)
-      params = {
-        _: nonce,
-        _ackey: @key,
-        _acsec: @secret,
-        _action: env['url'].path
-      }
-      params.merge! JSON.parse(env['body']) if env['body']
-      query = env['url'].query
-
-      Deribit.signature @key, nonce, params, query
+    # Authorization: deri-hmac-sha256 id=ClientId,ts=Timestamp,sig=Signature,nonce=Nonce
+    def header(env, timestamp, nonce)
+      signature = Deribit.http_signature env, timestamp, nonce, @secret
+      "deri-hmac-sha256 id=#{@key},ts=#{timestamp},sig=#{signature},nonce=#{nonce}"
     end
   end
 end

@@ -8,7 +8,7 @@
 [![Yard Docs](https://img.shields.io/badge/yard-docs-blue.svg)](https://www.rubydoc.info/gems/deribit-api)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/icostan/deribit-api-ruby/blob/master/LICENSE)
 
-Ruby library for [Deribit API](https://docs.deribit.com)
+Idiomatic Ruby library for [Deribit API 2.0](https://docs.deribit.com)
 
 ## Installation
 
@@ -32,27 +32,46 @@ Or install it yourself as:
 
 ```ruby
 require 'deribit-api'
-```
 
-Create a simple client to access public APIs
-
-```ruby
+# for public data only
 client = Deribit::Client.new
-trades = client.trades 'options', count: 3
-trades.first
-  => #<Hashie::Mash amount=3.0 direction="buy" indexPrice=3817.31 instrument="BTC-29MAR19-4500-C" iv=60.33 price=0.016 quantity=3.0 tickDirection=0 timeStamp=1551274556589 tradeId=16055937 tradeSeq=712>
-trades.first.instrument
-  => "BTC-29MAR19-4500-C"
+
+# for private data pass KEY and SECRET
+client = Deribit::Client.new key: 'KEY', secret: 'SECRET'
 ```
 
-Pass key and secret to access private APIs
+Get trades via HTTP APIs and idiomatic Ruby:
 
 ```ruby
-client = Deribit::Client.new key: 'KEY', secret: 'SECRET'
-account = client.account
- => #<Hashie::Mash PNL=0.0 SRPL=0.0 SUPL=0.0 availableFunds=9.99995789 balance=9.99995789 currency="BTC" deltaTotal=0.0 depositAddress="2N6SU5Yjn7AfYcT89QyeeHvHyZoqTt2GLyi" equity=9.999957896 futuresPNL=0.0 futuresSRPL=0.0 futuresSUPL=0.0 initialMargin=0.0 maintenanceMargin=0.0 marginBalance=9.99995789 optionsD=0.0 optionsG=0.0 optionsPNL=0.0 optionsSRPL=0.0 optionsSUPL=0.0 optionsTh=0.0 optionsV=0.0 sessionFunding=0.0>
-account.equity
-  => 9.999957896
+trades = client.trades instrument_name: 'BTC-PERPETUAL', count: 3
+trades.first
+=> #<Hashie::Mash amount=770.0 direction="sell" index_price=7088.57 instrument_name="BTC-PERPETUAL" price=7088.5 tick_direction=3 timestamp=1587632258141 trade_id="73366505" trade_seq=45738005>
+trades.first.instrument_name
+=> "BTC-PERPETUAL"
+```
+
+Streaming trades via Websocket APIs and idiomatic Ruby:
+
+```ruby
+client.trades(instrument_name: 'BTC-PERPETUAL') do |trade|
+	puts trade
+end
+=> #<Hashie::Mash amount=10.0 direction="sell" index_price=7076.01 instrument_name="BTC-PERPETUAL" price=7076.0 tick_direction=3 timestamp=1587632546493 trade_id="73366877" trade_seq=45738278>
+```
+
+Access generic HTTP API endpoints: <https://docs.deribit.com/#market-data>
+
+```ruby
+result = client.http.get '/public/ping'
+=> "pong"
+```
+
+Access generic Websocket API channels: <https://docs.deribit.com/#subscriptions>
+
+```ruby
+client.websocket.subscribe 'user.portofolio.BTC' do |data|
+	puts data
+end
 ```
 
 ### Examples
@@ -61,21 +80,22 @@ Fetch all tradable instruments:
 
 ```ruby
 instruments = client.instruments
-puts instruments.first
+instruments.first
+=> #<Hashie::Mash base_currency="BTC" contract_size=1.0 creation_timestamp=1587024008000 expiration_timestamp=1588320000000 instrument_name="BTC-1MAY20-6750-C" is_active=true kind="option" maker_commission=0.0004 min_trade_amount=0.1 option_type="call" quote_currency="USD" settlement_period="week" strike=6750.0 taker_commission=0.0004 tick_size=0.0005>
 ```
 
 Orderbook for BTCUSD perpetual instrument:
 
 ```ruby
-orderbook = client.orderbook 'BTC-PERPETUAL', depth: 3
+orderbook = client.book instrument_name: 'BTC-PERPETUAL', depth: 3
 puts orderbook.asks.first
 ```
 
 Orderbook streaming via websocket:
 
 ```ruby
-@client.orderbook 'ETH-PERPETUAL' do |orderbook|
-  puts orderbook
+client.book instrument_name: 'ETH-PERPETUAL', group: 1, depth: 3 do |book|
+  puts book
 end
 ```
 
@@ -86,71 +106,18 @@ response = client.buy 'BTC-PERPETUAL', 100, price: 2500
 puts response.order.state
 ```
 
-Get last 10 option trades via HTTP:
+Account  info:
 
 ```ruby
-trades = client.trades 'options', count: 10
-puts trades.first
+account = client.account
+=> #<Hashie::Mash available_funds=9.99958335 available_withdrawal_funds=9.99958335 balance=9.99958335 currency="BTC" delta_total=0.0 deposit_address="2N9KizxwYNrKgd22QfSz9zxT4EPR4uAsWYr" equity=9.99958335 futures_pl=0.0 futures_session_rpl=0.0 futures_session_upl=0.0 initial_margin=0.0 limits=#<Hashie::Mash matching_engine=2 matching_engine_burst=20 non_matching_engine=200 non_matching_engine_burst=300> maintenance_margin=0.0 margin_balance=9.99958335 options_delta=0.0 options_gamma=0.0 options_pl=0.0 options_session_rpl=0.0 options_session_upl=0.0 options_theta=0.0 options_value=0.0 options_vega=0.0 portfolio_margining_enabled=false session_funding=0.0 session_rpl=0.0 session_upl=0.0 total_pl=0.0>
+account.equity
+=> 9.99958335
 ```
-
-Stream ongoing trades via websocket:
-
-```ruby
-@client.trades do |trade|
- puts trade
-end
-```
-
-Options trading summary:
-
-```ruby
-summaries = client.summary :options
-puts summaries.first
-```
-
-## API Endpoints
-
-All endpoints marked with [X] are fully implemented and ready to use, see the features table below:
-
-API endpoints | Private? | HTTP API | Websocket API | FIX API |
---------------|----------|----------|---------------|---------|
-Time || [X] | [X] ||
-Setheartbeat || N/A | [X] ||
-Cancelheartbeat || N/A | [X] ||
-Test || [X] | [X] ||
-Ping || [X] | [X] ||
-Instruments || [X] | [X] ||
-Currencies || [X] | [X] ||
-Index || [X] | [X] ||
-Orderbook || [X] | [X] ||
-Trades || [X] | [X] ||
-Summary || [X] | [X] ||
-Announcements || [X] | [X] ||
-Settlements || [X] | [X] ||
-Account | YES | [X] | [X] ||
-Buy | YES | [X] | [X] ||
-Sell | YES | [X] | [X] ||
-Edit | YES | [X] | [X] ||
-Cancel | YES | [X] | [X] ||
-Cancel all | YES | [X] | [X] ||
-Orders | YES | [X] | [X] ||
-Positions | YES | [X] | [X]||
-Orders history | YES | [X] | [X] ||
-Order | YES | [X] |[X]||
-Trades history | YES | [X] | [X] ||
-New announcements | YES | [X] | [X] ||
-Logout | YES | N/A | [X] ||
-Cancel on disconnect | YES | N/A | [X] ||
-Get email lang | YES | [X] | [X] ||
-Set email lang | YES | [X] | [X] ||
-Set announcements read | YES | [X] | [X] ||
-Settlements history | YES | [X] | [X] ||
-Subscribe | | N/A |  ||
-Unsubscribe | | N/A |  ||
 
 ## Development
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+After checking out the repo, run `bin/setup` to install dependencies. Then, run `bundle exec rake` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
 
 To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
 

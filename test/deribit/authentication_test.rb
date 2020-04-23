@@ -2,15 +2,19 @@ require 'minitest_helper'
 
 class Deribit::AuthenticationTest < Minitest::Test
   def setup
-    @authentication = Deribit::Authentication.new nil, '2YZn85siaUf5A', 'BTMSIAJ8IYQTAV4MLN88UAHLIUNYZ3HN'
+    @authentication = Deribit::Authentication.new nil, ENV['API_KEY'], ENV['API_SECRET']
   end
 
   def test_signature
     env = {
-      'url' => URI.parse('http://test.com/api/v1/private/buy'),
-      'body' => '{"instrument": "BTC-15JAN16", "price": 500, "quantity": 1}'
+      'method' => 'get',
+      'url' => URI.parse('https://test.com/api/v2/private/get_account_summary?currency=BTC'),
+      'body' => ''
     }
-    signature = @authentication.signature env, 1452237485895
-    assert_equal '2YZn85siaUf5A.1452237485895.KOlc7ELGnz8cjYp614ONxZlngo/z2AHMEjVdlHlW9Oo=', signature
+    timestamp = 1586962148000
+    nonce = 't52ep048'
+
+    signature = @authentication.header env, timestamp, nonce
+    assert_equal "deri-hmac-sha256 id=#{ENV['API_KEY']},ts=#{timestamp},sig=515f6f48629d424c9e515cf0baeb4d0228d260fd19066fbd6a71ff76c7f293d6,nonce=#{nonce}", signature
   end
 end
