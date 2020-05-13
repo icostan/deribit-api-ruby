@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Deribit
-  # Websocket API
+  # Websocket API adapter
   # @author Iulian Costan (deribit-api@iuliancostan.com)
   # @see https://docs.deribit.com/#subscriptions
   class Websocket
@@ -62,10 +62,18 @@ module Deribit
     end
 
     def authorize
+      @callbacks['auth'] = lambda do |result|
+        @access_token = result['access_token']
+      end
+
+      @ws.send authorize_payload.to_json.to_s
+    end
+
+    def authorize_payload
       timestamp = Time.now.utc.to_i * 1000
       nonce = rand(999_999).to_s
       signature = Deribit.signature timestamp, nonce, '', @secret
-      payload = {
+      {
         jsonrpc: '2.0',
         method: 'public/auth',
         id: 'auth',
@@ -78,10 +86,6 @@ module Deribit
           signature: signature
         }
       }
-      @callbacks['auth'] = lambda do |result|
-        @access_token = result['access_token']
-      end
-      @ws.send payload.to_json.to_s
     end
 
     def websocket_url

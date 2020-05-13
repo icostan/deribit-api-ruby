@@ -34,7 +34,7 @@ Or install it yourself as:
 require 'deribit-api'
 
 # for public data
-client = Deribit::Client.new testnet: true, debug: true
+client = Deribit::Client.new testnet: true, debug: true, raise_error: true
 
 # pass KEY and SECRET to access private data
 client = Deribit::Client.new key: 'KEY', secret: 'SECRET'
@@ -66,14 +66,14 @@ result = client.buy 'BTC-PERPETUAL', 10, price: 2500
 => #<Hashie::Mash order=#<Hashie::Mash amount=10 api=true average_price=0.0 commission=0.0 creation_timestamp=1587644442494 direction="buy" filled_amount=0 instrument_name="BTC-PERPETUAL" is_liquidation=false label="" last_update_timestamp=1587644442494 max_show=10 order_id="3887469320" order_state="open" order_type="limit" post_only=false price=2500.0 profit_loss=0.0 reduce_only=false replaced=false time_in_force="good_til_cancelled" web=false> trades=#<Hashie::Array []>>
 ```
 
-Access generic HTTP API endpoints: <https://docs.deribit.com/#market-data>
+Direct access to any HTTP API endpoints: <https://docs.deribit.com/#market-data>
 
 ```ruby
 result = client.http.get '/public/ping'
 => "pong"
 ```
 
-Access generic Websocket API channels: <https://docs.deribit.com/#subscriptions>
+Direct access to any Websocket API channels: <https://docs.deribit.com/#subscriptions>
 
 ```ruby
 client.websocket.subscribe 'user.portofolio.BTC' do |data|

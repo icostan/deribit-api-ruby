@@ -1,15 +1,15 @@
 module Deribit
-  # HTTP API
+  # HTTP API adapter
   # @author Iulian Costan (deribit-api@iuliancostan.com)
   # @see https://docs.deribit.com/api-http.html
   class Http
-    def initialize(host, key: nil, secret: nil, debug: false)
+    def initialize(host, key: nil, secret: nil, debug: false, raise_error: true)
       @connection = Faraday::Connection.new(url: http_url(host)) do |f|
         f.request :json
         f.use Deribit::Authentication, key, secret
         f.response :mashify
         f.response :json
-        f.use Faraday::Response::RaiseError
+        f.use Faraday::Response::RaiseError if raise_error
         f.response :detailed_logger if debug
         f.adapter Faraday.default_adapter
       end

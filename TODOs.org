@@ -1,3 +1,4 @@
+#+TODO: TODO | DONE FAIL N/A
 * Tasks                                                             :DERIBIT:
   :PROPERTIES:
   :CATEGORY: deribit
@@ -28,19 +29,21 @@
    CLOCK: [2019-04-17 Wed 17:55]--[2019-04-17 Wed 18:26] =>  0:31
    CLOCK: [2019-04-16 Tue 12:23]--[2019-04-16 Tue 18:16] =>  5:53
    :END:
-** response middleware
+** N/A response middleware
 ** check key/secret present for private endpoints
 ** DONE fix trade history
    CLOSED: [2019-04-23 Tue 15:17]
-** research async websocket implementation
+** DONE research async websocket implementation
 ** cleanup 'params' for both http and websocket
-** update buy/sell endpoints with new params
+** DONE update buy/sell endpoints with new params
 ** DONE initial 2.0 API implementaion
+** refactor Naming module
 ** TODO deribit-api-ruby maintenance
-   SCHEDULED: <2020-05-09 Sat +1m>
+   SCHEDULED: <2020-06-09 Tue +3m>
    :PROPERTIES:
-   :LAST_REPEAT: [2020-04-23 Thu 13:25]
+   :LAST_REPEAT: [2020-05-13 Wed 14:14]
    :END:
+   - State "DONE"       from "TODO"       [2020-05-13 Wed 14:14]
    - State "DONE"       from "TODO"       [2020-04-23 Thu 13:25]
    - State "DONE"       from "TODO"       [2020-01-09 Thu 18:00]
    - State "DONE"       from "TODO"       [2019-10-21 Mon 14:43]

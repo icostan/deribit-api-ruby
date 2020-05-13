@@ -1,9 +1,10 @@
 # frozen_string_literal: true
 
 module Deribit
-  TESTNET_HOST = 'test.deribit.com'
-  MAINNET_HOST = 'www.deribit.com'
+  TESTNET_HOST = 'test.deribit.com'.freeze
+  MAINNET_HOST = 'www.deribit.com'.freeze
 
+  # Deribit API 2.0 client implementation
   # @author Iulian Costan (deribit-api@iuliancostan.com)
   class Client
     attr_reader :http, :websocket
@@ -35,7 +36,7 @@ module Deribit
 
     # Retrieves all cryptocurrencies supported by the API.
     # @return [Array] the list of cryptocurrencies
-    # @see https://docs.deribit.com/rpc-endpoints.html#getcurrencies
+    # @see https://docs.deribit.com/#public-get_currencies
     def currencies
       http.get '/public/get_currencies'
     end
@@ -44,7 +45,7 @@ module Deribit
     # @param options [Hash]
     # @option options [String] :currency the currency to get instruments for
     # @return [Hashie::Mash] index price for BTC-USD instrument
-    # @see https://docs.deribit.com/rpc-endpoints.html#index
+    # @see https://docs.deribit.com/#public-get_index
     def index(options = { currency: 'BTC' })
       unless options[:currency]
         raise ArgumentError, 'currency argument is required'
@@ -167,7 +168,7 @@ module Deribit
     # @param ext [Boolean] Requests additional fields
     # @return [Hashie::Mash] the account details
     # @yield [Hashie::Mash] the account details
-    # @see https://docs.deribit.com/rpc-endpoints.html#account
+    # @see https://docs.deribit.com/#private-get_account_summary
     def account(currency: 'BTC', ext: false)
       if block_given?
         raise Deribit::NotImplementedError, 'not implemented'
@@ -179,7 +180,7 @@ module Deribit
     # Places a buy order for an instrument.
     # @param instrument_name [String] Name of the instrument to buy
     # @param amount [Integer] The number of contracts to buy
-    # @!macro deribit.options
+    # @!macro deribit.buy_sell_options
     #   @param options [Hash] more options for the order
     #   @option options [String] :type (limit) The order type, possible types: "limit", "stop_limit", "market", "stop_market"
     #   @option options [String] :label user defined label for the order (maximum 32 characters)
@@ -203,7 +204,7 @@ module Deribit
     # Places a sell order for an instrument.
     # @param instrument_name [String] Name of the instrument to sell
     # @param amount [Integer] The number of contracts to buy
-    # @!macro deribit.options
+    # @!macro deribit.buy_sell_options
     # @return [Hashie::Mash] the details of new order
     # @see https://docs.deribit.com/#private-sell
     def sell(instrument_name, amount, options = {})
@@ -267,7 +268,7 @@ module Deribit
     # Best bid/ask price and size.
     # @param options [Hash]
     # @option options [String] :instrument_name (BTC-PERPETUAL) Instrument to return open orders for
-    # @see https://docs.deribit.com/?shell#quote-instrument_name
+    # @see https://docs.deribit.com/#quote-instrument_name
     def quote(options = { instrument_name: 'BTC-PERPETUAL' }, &blk)
       unless block_given?
         raise 'block is missing, HTTP-RPC not supported for this endpoint'
@@ -281,7 +282,7 @@ module Deribit
     # @param options [Hash]
     # @option options [String] :instrument_name (BTC-PERPETUAL) Instrument to return open orders for
     # @option options [String] :interval (raw) Frequency of notifications: raw, 100ms
-    # @see https://docs.deribit.com/?shell#ticker-instrument_name-interval
+    # @see https://docs.deribit.com/#ticker-instrument_name-interval
     def ticker(options = { instrument_name: 'BTC-PERPETUAL' }, &blk)
       if block_given?
         channel = Naming.channel 'ticker', options
@@ -293,19 +294,24 @@ module Deribit
 
     # Retrieves open orders.
     # @param options [Hash]
-    # @option options [String] :instrument_name (BTC-PERPETUAL) Instrument to return open orders for
-    # @option options [string] :kind  (any) Instrument kind, future, option or any
-    # @option options [String] :currency (any) The currency symbol, BTC, ETH, any
+    # @option options [String] :instrument_name Instrument to return open orders for
+    # @option options [String] :currency The currency symbol, BTC, ETH, any
+    # @option options [string] :kind (any) Instrument kind, future, option or any
+    # @option options [string] :type (all) Order type: all, limit, stop_all, stop_limit, stop_market
     # @option options [String] :interval (raw) Frequency of notifications: raw, 100ms
     # @return [Array] the list of open orders
     # @yield [Hashie::Mash] the order
-    # @see https://docs.deribit.com/rpc-endpoints.html#getopenorders
-    def orders(options = { instrument_name: 'BTC-PERPETUAL' }, &blk)
+    # @see https://docs.deribit.com/#private-get_open_orders_by_currency
+    # @see https://docs.deribit.com/#private-get_open_orders_by_instrument
+    def orders(options, &blk)
+      raise ArgumentError, 'either :instrument_name or :currency is required' unless options[:instrument_name] || options[:currency]
+
       if block_given?
         channel = Naming.channel 'user.orders', options
         websocket.subscribe channel, params: options, &blk
       else
-        http.get '/private/get_open_orders_by_instrument', options
+        uri = Naming.orders_uri options
+        http.get uri, options
       end
     end
 
@@ -314,23 +320,9 @@ module Deribit
     # @option options [String] :currency (any) The currency symbol, BTC, ETH
     # @option options [string] :kind  (any) Instrument kind, future, option
     # @return [Array] the list of positions
-    # @see https://docs.deribit.com/rpc-endpoints.html#positions
+    # @see https://docs.deribit.com/#private-get_positions
     def positions(options = { currency: 'BTC' })
       http.get '/private/get_positions', options
     end
-
-    # Retrieve order details state by order id.
-    # @param order_id [String] the ID of the order to be retrieved
-    # @return [Hashie::Mash] the details of the order
-    # @yield [Hashie::Mash] the details of the order
-    # see https://docs.deribit.com/rpc-endpoints.html#orderstate
-    # def order(order_id, &blk)
-    #   params = { orderId: order_id, auth: true }
-    #   if block_given?
-    #     websocket.subscribe :orderstate, params: params, &blk
-    #   else
-    #     http.get :orderstate, auth: true, params: params
-    #   end
-    # end
   end
 end

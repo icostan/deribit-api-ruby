@@ -7,6 +7,12 @@ class Deribit::ClientTest < Minitest::Test
     @client = Deribit::Client.new key: ENV['API_KEY'], secret: ENV['API_SECRET'], testnet: true, debug: false
   end
 
+  def test_error_http
+    assert_raises(Faraday::BadRequestError) do
+      @client.http.get '/public/WRONG'
+    end
+  end
+
   def test_user_portofolio_websocket
     @client.websocket.subscribe 'user.portofolio.BTC' do |data|
       assert data.available_funds > 0
@@ -179,9 +185,9 @@ class Deribit::ClientTest < Minitest::Test
 
     sleep 5
 
-    result = @client.buy 'BTC-PERPETUAL', 10, type: :market
+    result = @client.buy 'BTC-PERPETUAL', 20, type: :market
     assert !result.order.order_id.nil?
-    assert_equal 10, result.order.amount
+    assert_equal 20, result.order.amount
     assert result.trades.size > 0
     result = @client.close 'BTC-PERPETUAL'
     assert 'filled', result.order.order_state
@@ -215,12 +221,12 @@ class Deribit::ClientTest < Minitest::Test
 
   def test_cancel_all_http
     @client.buy 'BTC-PERPETUAL', 10, price: 1000
-    result = @client.cancel_all currency: 'ETH'
-    assert 1, @client.orders.size
-    result = @client.cancel_all instrument_name: 'ETH-PERPETUAL'
-    assert 1, @client.orders.size
-    result = @client.cancel_all
-    assert 0, @client.orders.size
+    @client.cancel_all currency: 'ETH'
+    assert 1, @client.orders(instrument_name: 'BTC-PERPETUAL').size
+    @client.cancel_all instrument_name: 'ETH-PERPETUAL'
+    assert 1, @client.orders(instrument_name: 'BTC-PERPETUAL').size
+    @client.cancel_all
+    assert 0, @client.orders(instrument_name: 'BTC-PERPETUAL').size
   end
 
   def test_quote_websocket
@@ -247,16 +253,19 @@ class Deribit::ClientTest < Minitest::Test
 
   def test_orders_http
     @client.buy 'BTC-PERPETUAL', 10, price: 1000
-    orders = @client.orders
+    orders = @client.orders instrument_name: 'BTC-PERPETUAL'
     assert_equal 1, orders.size
     assert_equal 10, orders.first.amount
     assert_equal 1000, orders.first.price
+    orders = @client.orders currency: 'BTC'
+    assert_equal 1, orders.size
+    assert_equal 10, orders.first.amount
     @client.cancel_all
   end
 
   def test_orders_websocket
     result = @client.buy 'BTC-PERPETUAL', 10, price: 1000
-    @client.orders do |order|
+    @client.orders instrument_name: 'BTC-PERPETUAL' do |order|
       assert_equal 2000, order.price
     end
     @client.edit result.order.order_id, 20, 2000
