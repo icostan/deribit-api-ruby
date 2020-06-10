@@ -37,12 +37,13 @@
 ** cleanup 'params' for both http and websocket
 ** DONE update buy/sell endpoints with new params
 ** DONE initial 2.0 API implementaion
-** refactor Naming module
+** DONE refactor Naming module
 ** TODO deribit-api-ruby maintenance
-   SCHEDULED: <2020-06-09 Tue +3m>
+   SCHEDULED: <2020-12-09 Wed +6m>
    :PROPERTIES:
-   :LAST_REPEAT: [2020-05-13 Wed 14:14]
+   :LAST_REPEAT: [2020-06-10 Wed 07:36]
    :END:
+   - State "DONE"       from "TODO"       [2020-06-10 Wed 07:36]
    - State "DONE"       from "TODO"       [2020-05-13 Wed 14:14]
    - State "DONE"       from "TODO"       [2020-04-23 Thu 13:25]
    - State "DONE"       from "TODO"       [2020-01-09 Thu 18:00]

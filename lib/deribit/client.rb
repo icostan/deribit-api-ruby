@@ -1,12 +1,14 @@
 # frozen_string_literal: true
+require 'deribit/naming'
 
 module Deribit
-  TESTNET_HOST = 'test.deribit.com'.freeze
-  MAINNET_HOST = 'www.deribit.com'.freeze
+  TESTNET_HOST = 'test.deribit.com'
+  MAINNET_HOST = 'www.deribit.com'
 
   # Deribit API 2.0 client implementation
   # @author Iulian Costan (deribit-api@iuliancostan.com)
   class Client
+    include Naming
     attr_reader :http, :websocket
 
     # Create new instance
@@ -71,7 +73,7 @@ module Deribit
       end
 
       if block_given?
-        channel = Naming.book_channel options
+        channel = book_channel options
         websocket.subscribe channel, params: {}, &blk
       else
         http.get '/public/get_order_book', options
@@ -116,10 +118,10 @@ module Deribit
       end
 
       if block_given?
-        channel = Naming.trades_channel filters
+        channel = trades_channel filters
         websocket.subscribe channel, params: {}, &blk
       else
-        uri = Naming.trades_uri filters
+        uri = trades_uri filters
         response = http.get uri, filters
         response.trades
       end
@@ -261,7 +263,7 @@ module Deribit
     # @see https://docs.deribit.com/#private-cancel_all_by_currency
     # @see https://docs.deribit.com/#private-cancel_all_by_instrument
     def cancel_all(options = {})
-      uri = Naming.cancel_uri options
+      uri = cancel_uri options
       http.get uri, options
     end
 
@@ -274,7 +276,7 @@ module Deribit
         raise 'block is missing, HTTP-RPC not supported for this endpoint'
       end
 
-      channel = Naming.channel_for_instrument 'quote', options
+      channel = channel_for_instrument 'quote', options
       websocket.subscribe channel, params: options, &blk
     end
 
@@ -285,7 +287,7 @@ module Deribit
     # @see https://docs.deribit.com/#ticker-instrument_name-interval
     def ticker(options = { instrument_name: 'BTC-PERPETUAL' }, &blk)
       if block_given?
-        channel = Naming.channel 'ticker', options
+        channel = channel 'ticker', options
         websocket.subscribe channel, params: options, &blk
       else
         http.get '/public/ticker', options
@@ -307,10 +309,10 @@ module Deribit
       raise ArgumentError, 'either :instrument_name or :currency is required' unless options[:instrument_name] || options[:currency]
 
       if block_given?
-        channel = Naming.channel 'user.orders', options
+        channel = channel 'user.orders', options
         websocket.subscribe channel, params: options, &blk
       else
-        uri = Naming.orders_uri options
+        uri = orders_uri options
         http.get uri, options
       end
     end
