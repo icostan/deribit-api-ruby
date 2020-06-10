@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    deribit-api (2.0.1)
+    deribit-api (2.0.2)
       faraday
       faraday-detailed_logger
       faraday_middleware
