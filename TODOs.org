@@ -3,6 +3,7 @@
   :PROPERTIES:
   :CATEGORY: deribit
   :CREATED:  20200309
+  :ID:       fb1da497-7d80-44f5-a28c-911b125e3219
   :END:
 ** DONE Initial deribit gem release
    CLOSED: [2019-01-04 Fri] SCHEDULED: <2019-01-04 Fri>
@@ -38,11 +39,14 @@
 ** DONE update buy/sell endpoints with new params
 ** DONE initial 2.0 API implementaion
 ** DONE refactor Naming module
-** TODO deribit-api-ruby maintenance
-   SCHEDULED: <2020-12-09 Wed +6m>
+** deribit-api-ruby maintenance
    :PROPERTIES:
-   :LAST_REPEAT: [2020-06-10 Wed 07:36]
+   :LAST_REPEAT: [2021-12-11 Sat 08:41]
+   :ID:       512776a1-df85-4587-b414-6a2830aaae57
    :END:
+   - State "DONE"       from "TODO"       [2021-12-11 Sat 08:41]
+   - State "DONE"       from "TODO"       [2021-06-09 Wed 08:31]
+   - State "DONE"       from "TODO"       [2020-12-14 Mon 09:05]
    - State "DONE"       from "TODO"       [2020-06-10 Wed 07:36]
    - State "DONE"       from "TODO"       [2020-05-13 Wed 14:14]
    - State "DONE"       from "TODO"       [2020-04-23 Thu 13:25]
